@@ -1,4 +1,4 @@
-// autoOA.cpp : �A�v���P�[�V�����̃G���g�� �|�C���g���`���܂��B
+// autoOA.cpp : アプリケーションのエントリ ポイントを定義します。
 //
 
 #include "stdafx.h"
@@ -6,16 +6,17 @@
 
 #define MAX_LOADSTRING 100
 
-// �O���[�o���ϐ�:
-HINSTANCE hInst;								// ���݂̃C���^�[�t�F�C�X
-TCHAR szTitle[MAX_LOADSTRING];					// �^�C�g�� �o�[�̃e�L�X�g
-TCHAR szWindowClass[MAX_LOADSTRING];			// ���C�� �E�B���h�E �N���X��
+// グローバル変数:
+HINSTANCE hInst;								// 現在のインターフェイス
+HWND m_mainWnd;
+TCHAR szTitle[MAX_LOADSTRING];					// タイトル バーのテキスト
+TCHAR szWindowClass[MAX_LOADSTRING];			// メイン ウィンドウ クラス名
 
-LPTSTR m_urlKey; // �Ј��i���o�[/�L�[ 
+LPTSTR m_urlKey; // 社員ナンバー/キー 
 LPCWCHAR m_uid;
 LPCWCHAR m_pass;
 
-// ���̃R�[�h ���W���[���Ɋ܂܂��֐��̐錾��]�����܂�:
+// このコード モジュールに含まれる関数の宣言を転送します:
 ATOM				MyRegisterClass(HINSTANCE hInstance);
 BOOL				InitInstance(HINSTANCE, int);
 DWORD				ChooseAuthScheme(DWORD);
@@ -25,6 +26,7 @@ INT_PTR CALLBACK	About(HWND, UINT, WPARAM, LPARAM);
 void TrayMenu(HWND);
 BOOL                Att();
 BOOL                Leave();
+BOOL Ballon(LPSTR, LPSTR, DWORD, UINT);
 void CALLBACK		InternetCallback(HINTERNET, DWORD_PTR, DWORD, LPVOID, DWORD);
 
 int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
@@ -35,11 +37,11 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 	UNREFERENCED_PARAMETER(hPrevInstance);
 	UNREFERENCED_PARAMETER(lpCmdLine);
 
- 	// TODO: �����ɃR�[�h��}�����Ă��������B
+ 	// TODO: ここにコードを挿入してください。
 	MSG msg;
 	HACCEL hAccelTable;
 	
-	// �O���[�o������������������Ă��܂��B
+	// グローバル文字列を初期化しています。
 	LoadString(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
 	LoadString(hInstance, IDC_AUTOOA, szWindowClass, MAX_LOADSTRING);
 	MyRegisterClass(hInstance);
@@ -72,7 +74,7 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 
 	}
 
-	// �A�v���P�[�V�����̏����������s���܂�:
+	// アプリケーションの初期化を実行します:
 	if (!InitInstance (hInstance, nCmdShow))
 	{
 		return FALSE;
@@ -80,7 +82,7 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 
 	hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_AUTOOA));
 
-	// ���C�� ���b�Z�[�W ���[�v:
+	// メイン メッセージ ループ:
 	while (GetMessage(&msg, NULL, 0, 0))
 	{
 		if (!TranslateAccelerator(msg.hwnd, hAccelTable, &msg))
@@ -95,9 +97,9 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 
 
 //
-//  �֐�: MyRegisterClass()
+//  関数: MyRegisterClass()
 //
-//  �ړI: �E�B���h�E �N���X��o�^���܂��B
+//  目的: ウィンドウ クラスを登録します。
 //
 ATOM MyRegisterClass(HINSTANCE hInstance)
 {
@@ -147,14 +149,14 @@ DWORD ChooseAuthScheme(DWORD dwSupportedSchemes)
 
 
 //
-//   �֐�: InitInstance(HINSTANCE, int)
+//   関数: InitInstance(HINSTANCE, int)
 //
-//   �ړI: �C���X�^���X �n���h����ۑ����āA���C�� �E�B���h�E���쐬���܂��B
+//   目的: インスタンス ハンドルを保存して、メイン ウィンドウを作成します。
 //
-//   �R�����g:
+//   コメント:
 //
-//        ���̊֐��ŁA�O���[�o���ϐ��ŃC���X�^���X �n���h����ۑ����A
-//        ���C�� �v���O���� �E�B���h�E���쐬����ѕ\�����܂��B
+//        この関数で、グローバル変数でインスタンス ハンドルを保存し、
+//        メイン プログラム ウィンドウを作成および表示します。
 //
 BOOL CallHttpRequest(LPCWCHAR addr)
 {
@@ -176,6 +178,9 @@ BOOL CallHttpRequest(LPCWCHAR addr)
 	DWORD dwSize = sizeof(DWORD);
 	BOOL  bResults = FALSE;
 	BOOL  bDone = FALSE;
+
+	DWORD dwDownloaded = 0;
+	LPSTR pszOutBuffer;
 
 	DWORD dwProxyAuthScheme = 0;
 
@@ -220,7 +225,7 @@ BOOL CallHttpRequest(LPCWCHAR addr)
 			&urlcomponents))
 		{
 
-			MessageBoxW(NULL, L"URL��͂Ɏ��s", L"URL��͂Ɏ��s", 0);
+			MessageBoxW(NULL, L"URL解析に失敗", L"URL解析に失敗", 0);
 			return -1;
 		}
 
@@ -228,17 +233,17 @@ BOOL CallHttpRequest(LPCWCHAR addr)
 		wstrObjectName = urlcomponents.lpszUrlPath;
 		nPort = urlcomponents.nPort;
 
-		// HTTP��HTTPS������ȊO��
+		// HTTPかHTTPSかそれ以外か
 		DWORD dwOpenRequestFlag = (INTERNET_SCHEME_HTTPS == urlcomponents.nScheme) ? WINHTTP_FLAG_SECURE : 0;
 
-		// POST��GET��
+		// POSTかGETか
 		if (false)
 		{	// POST
 			wstrVerb = L"POST";
 			wstrHeaders = L"Content-Type: application/x-www-form-urlencoded";
 			//if (0 != tstrParameter.length())
-			//{	// �p�����[�^���A���M����I�v�V�����f�[�^�ɕϊ�����
-			//	char* pszOptional = NhT2M(tstrParameter.c_str());	// char������ɕϊ�
+			//{	// パラメータを、送信するオプションデータに変換する
+			//	char* pszOptional = NhT2M(tstrParameter.c_str());	// char文字列に変換
 			//	strOptional = pszOptional;
 			//	free(pszOptional);
 			//}
@@ -248,25 +253,25 @@ BOOL CallHttpRequest(LPCWCHAR addr)
 			wstrVerb = L"GET";
 			wstrHeaders = L"";
 			//if (0 != tstrParameter.length())
-			//{	// �I�u�W�F�N�g�ƃp�����[�^���u?�v�ŘA��
+			//{	// オブジェクトとパラメータを「?」で連結
 			//	WCHAR* pwszBuffer = NhT2W(tstrParameter.c_str());
 			//	wstrObjectName += L"?" + wstring(pwszBuffer);
 			//	free(pwszBuffer);
 			//}
 		}
 
-		// HTTP�ڑ�
+		// HTTP接続
 		m_hConnect = WinHttpConnect(s_hSession,
 			wstrServer,
 			nPort,
 			0);
 		if (NULL == m_hConnect)
 		{
-			MessageBoxW(NULL, L"HTTP�ڑ��Ɏ��s", L"HTTP�ڑ��Ɏ��s", 0);
+			MessageBoxW(NULL, L"HTTP接続に失敗", L"HTTP接続に失敗", 0);
 			return -2;
 		}
 
-		// HTTP�ڑ����J��
+		// HTTP接続を開く
 		m_hRequest = WinHttpOpenRequest(m_hConnect,
 			wstrVerb,
 			wstrObjectName,
@@ -276,18 +281,18 @@ BOOL CallHttpRequest(LPCWCHAR addr)
 			dwOpenRequestFlag);
 		if (NULL == m_hRequest)
 		{
-			MessageBoxW(NULL, L"HTTP�ڑ����J���Ɏ��s", L"HTTP�ڑ����J���Ɏ��s", 0);
+			MessageBoxW(NULL, L"HTTP接続を開くに失敗", L"HTTP接続を開くに失敗", 0);
 			return -3;
 		}
 
 
-		//// �R�[���o�b�N�֐��̐ݒ�
+		//// コールバック関数の設定
 		//if (WINHTTP_INVALID_STATUS_CALLBACK == WinHttpSetStatusCallback(m_hConnect,
 		//	(WINHTTP_STATUS_CALLBACK)InternetCallback,
 		//	WINHTTP_CALLBACK_FLAG_ALL_NOTIFICATIONS,
 		//	NULL))
 		//{
-		//	MessageBoxW(NULL, L"�R�[���o�b�N�̐ݒ�Ɏ��s", L"�R�[���o�b�N�̐ݒ�Ɏ��s", 0);
+		//	MessageBoxW(NULL, L"コールバックの設定に失敗", L"コールバックの設定に失敗", 0);
 		//	return -4;
 		//}
 
@@ -343,6 +348,41 @@ BOOL CallHttpRequest(LPCWCHAR addr)
 					// of the server's response.
 					printf("The resource was successfully retrieved.\n");
 					bDone = TRUE;
+
+					// Verify available data.
+					dwSize = 0;
+					if (!WinHttpQueryDataAvailable(m_hRequest, &dwSize))
+						printf("Error %u in WinHttpQueryDataAvailable.\n",
+						GetLastError());
+
+					// Allocate space for the buffer.
+					pszOutBuffer = new char[dwSize + 1];
+					if (!pszOutBuffer)
+					{
+						printf("Out of memory\n");
+						dwSize = 0;
+					}
+					else
+					{
+						// Read the Data.
+						ZeroMemory(pszOutBuffer, dwSize + 1);
+
+						if (!WinHttpReadData(m_hRequest, (LPVOID)pszOutBuffer,
+							dwSize, &dwDownloaded))
+							printf("Error %u in WinHttpReadData.\n", GetLastError());
+						else
+							printf("%s\n", pszOutBuffer);
+
+
+						// Success Tip
+						Ballon("200", pszOutBuffer, NIIF_INFO, NULL);
+
+						// Free the memory allocated to the buffer.
+						delete[] pszOutBuffer;
+					}
+
+					bResults = CALLHTTPREQUEST_OK_FININSHED;
+
 					break;
 
 				case 401:
@@ -414,7 +454,14 @@ BOOL CallHttpRequest(LPCWCHAR addr)
 
 			// If there are any errors, break out of the loop.
 			if (!bResults)
+			{
 				bDone = TRUE;
+				// TipError
+
+
+
+			}
+				
 		}
 
 		// Report any errors.
@@ -430,52 +477,64 @@ BOOL CallHttpRequest(LPCWCHAR addr)
 		if (s_hSession) WinHttpCloseHandle(s_hSession);
 	}
 
-	return TRUE;
+	return bResults;
 }
 
 BOOL Att() {
 
+	DWORD bResult;
+
 	size_t origsize = strlen(m_urlKey) + 1;
 	const size_t newsize = 100;
 	size_t convertedChars = 0;
 	wchar_t wcstring[newsize];
 	ZeroMemory(wcstring, sizeof(wcstring));
-	wcscat_s(wcstring, L"http://host/*/");
-	mbstowcs_s(&convertedChars, &wcstring[lstrlenW(L"http://host/*/")], origsize, m_urlKey, _TRUNCATE);
+	wcscat_s(wcstring, L"http://*/*/");
+	mbstowcs_s(&convertedChars, &wcstring[lstrlenW(L"http://*/*/")], origsize, m_urlKey, _TRUNCATE);
 
-	return CallHttpRequest(wcstring);
+	bResult = CallHttpRequest(wcstring);
+	if (bResult != CALLHTTPREQUEST_OK_FININSHED) {
+		Ballon("ERROR", "ERROR", NIIF_ERROR, NULL);
+	}
 
+	return bResult;
 }
 
 BOOL Leave() {
 
+	DWORD bResult;
+
 	size_t origsize = strlen(m_urlKey) + 1;
 	const size_t newsize = 100;
 	size_t convertedChars = 0;
 	wchar_t wcstring[newsize];
 	ZeroMemory(wcstring, sizeof(wcstring));
-	wcscat_s(wcstring, L"http://host/");
-	mbstowcs_s(&convertedChars, &wcstring[lstrlenW(L"http://host/")], origsize, m_urlKey, _TRUNCATE);
+	wcscat_s(wcstring, L"http://*/*/");
+	mbstowcs_s(&convertedChars, &wcstring[lstrlenW(L"http://*/*/")], origsize, m_urlKey, _TRUNCATE);
 
-	return CallHttpRequest(wcstring);
+	bResult = CallHttpRequest(wcstring);
+	if (bResult != CALLHTTPREQUEST_OK_FININSHED) {
+		Ballon("ERROR", "ERROR", NIIF_ERROR, NULL);
+	}
 
+	return bResult;
 }
 
 //
-//   �֐�: InitInstance(HINSTANCE, int)
+//   関数: InitInstance(HINSTANCE, int)
 //
-//   �ړI: �C���X�^���X �n���h����ۑ����āA���C�� �E�B���h�E���쐬���܂��B
+//   目的: インスタンス ハンドルを保存して、メイン ウィンドウを作成します。
 //
-//   �R�����g:
+//   コメント:
 //
-//        ���̊֐��ŁA�O���[�o���ϐ��ŃC���X�^���X �n���h����ۑ����A
-//        ���C�� �v���O���� �E�B���h�E���쐬����ѕ\�����܂��B
+//        この関数で、グローバル変数でインスタンス ハンドルを保存し、
+//        メイン プログラム ウィンドウを作成および表示します。
 //
 BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 {
    HWND hWnd;
 
-   hInst = hInstance; // �O���[�o���ϐ��ɃC���X�^���X�������i�[���܂��B
+   hInst = hInstance; // グローバル変数にインスタンス処理を格納します。
    //system("att.bat");
 
    hWnd = CreateWindow(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
@@ -486,7 +545,9 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
       return FALSE;
    }
 
-   // �C��
+   m_mainWnd = hWnd;
+
+   // イン
    Att();
 
    //ShowWindow(hWnd, nCmdShow);
@@ -506,14 +567,49 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    return TRUE;
 }
 
+BOOL Ballon(LPSTR title, LPSTR msg, DWORD dwType, UINT timeout) {
+
+	NOTIFYICONDATA notifyIconData;
+	notifyIconData.cbSize = sizeof(notifyIconData);
+	notifyIconData.hWnd = m_mainWnd;
+
+	lstrcpyn(notifyIconData.szInfoTitle, title, sizeof(notifyIconData.szInfoTitle));
+	lstrcpyn(notifyIconData.szInfo, msg, sizeof(notifyIconData.szInfo));
+
+		//dwType = 0;
+		//dwType = NIIF_INFO;
+		//dwType = NIIF_WARNING;
+		//dwType = NIIF_ERROR;
+		//dwType = NIIF_USER; // Use the "hBalloonIcon" parameter.
+	//| (bSound ? 0 : NIIF_NOSOUND)
+	//	| (bLargeIcon ? NIIF_LARGE_ICON : 0)
+	//	| (bRespectQuiteTime ? NIIF_RESPECT_QUIET_TIME : 0);
+
+	notifyIconData.dwInfoFlags = dwType;
+	
+	notifyIconData.uTimeout = timeout;
+	notifyIconData.hBalloonIcon = NULL;
+	notifyIconData.uFlags = NIF_INFO | NIF_GUID;
+
+	if (dwType == NIIF_ERROR)
+	{
+		return MessageBox(m_mainWnd, "設定ファイル、ネットワーク接続状況を確認してください！", "接続エラー", MB_ICONERROR);
+	} else 
+	{
+		return Shell_NotifyIcon(NIM_MODIFY, &notifyIconData);
+	}
+
+}
+
+
 //
-//  �֐�: WndProc(HWND, UINT, WPARAM, LPARAM)
+//  関数: WndProc(HWND, UINT, WPARAM, LPARAM)
 //
-//  �ړI:    ���C�� �E�B���h�E�̃��b�Z�[�W���������܂��B
+//  目的:    メイン ウィンドウのメッセージを処理します。
 //
-//  WM_COMMAND	- �A�v���P�[�V���� ���j���[�̏���
-//  WM_PAINT	- ���C�� �E�B���h�E�̕`��
-//  WM_DESTROY	- ���~���b�Z�[�W��\�����Ė߂�
+//  WM_COMMAND	- アプリケーション メニューの処理
+//  WM_PAINT	- メイン ウィンドウの描画
+//  WM_DESTROY	- 中止メッセージを表示して戻る
 //
 //
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
@@ -527,7 +623,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	case WM_COMMAND:
 		wmId    = LOWORD(wParam);
 		wmEvent = HIWORD(wParam);
-		// �I�����ꂽ���j���[�̉��:
+		// 選択されたメニューの解析:
 		switch (wmId)
 		{
 		case IDM_ABOUT:
@@ -538,18 +634,15 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			break;
 		case IDM_ATT:
 		{
-			// �C��
+			// イン
 			Att();
 		}
 			break;
 		case IDM_LEAVE:
 		{
-			// �A�E�g
+			// アウト
 			Leave();
 		}
-			break;
-		case OA_MS_SYSTEMTRAY:
-			MessageBox(hWnd, "OA_MS_SYSTEMTRAY", "OA_MS_SYSTEMTRAY", MB_APPLMODAL);
 			break;
 		default:
 			return DefWindowProc(hWnd, message, wParam, lParam);
@@ -557,12 +650,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		break;
 	case WM_PAINT:
 		hdc = BeginPaint(hWnd, &ps);
-		// TODO: �`��R�[�h�������ɒǉ����Ă�������...
+		// TODO: 描画コードをここに追加してください...
 		EndPaint(hWnd, &ps);
 		break;
 	case WM_QUERYENDSESSION:
 	{
-		// �A�E�g
+		// アウト
 		Leave();
 
 		exit(0);
@@ -573,12 +666,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 		if (wParam == PBT_APMRESUMEAUTOMATIC)
 		{
-			// �C��
+			// イン
 			Att();
 		}
 		else if (wParam == PBT_APMSUSPEND) 
 		{
-			// �A�E�g
+			// アウト
 			Leave();
 		}
 
@@ -662,13 +755,13 @@ void TrayMenu(HWND hWnd)
 	{
 	case ID_IN:
 	{
-		// �C��
+		// イン
 		Att();
 		break;
 	}
 	case ID_OUT:
 	{
-		// �A�E�g
+		// アウト
 		Leave();
 		break;
 	}
@@ -687,7 +780,7 @@ void TrayMenu(HWND hWnd)
 	// *pResult = 0;
 }
 
-// �o�[�W�������{�b�N�X�̃��b�Z�[�W �n���h���[�ł��B
+// バージョン情報ボックスのメッセージ ハンドラーです。
 INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 {
 	UNREFERENCED_PARAMETER(lParam);
@@ -719,73 +812,73 @@ void CALLBACK InternetCallback(HINTERNET hInternet,
 	switch (dwInternetStatus)
 	{
 	case WINHTTP_CALLBACK_STATUS_SENDREQUEST_COMPLETE:
-		// ���N�G�X�g�̑��M����
+		// リクエストの送信完了
 		OutputDebugString(_T("InternetStatus = SENDREQUEST_COMPLETE\n"));
 		{
-			//// ���X�|���X�̓����̑ҋ@
+			//// レスポンスの到着の待機
 			//if (!WinHttpReceiveResponse(m_hRequest, NULL))
 			//{
-			//	printf_s(_T("WinHttpReceiveResponse()�Ɏ��s"));
+			//	printf_s(_T("WinHttpReceiveResponse()に失敗"));
 			//	return;
 			//}
 		}
 		break;
 	case WINHTTP_CALLBACK_STATUS_HEADERS_AVAILABLE:
-		// �w�b�_�[�̎擾�\
+		// ヘッダーの取得可能
 		OutputDebugString(_T("InternetStatus = HEADERS_AVAILABLE\n"));
 		{
 			//DWORD dwStatusCode = 0;
 			//DWORD dwStatusCodeSize = sizeof(DWORD);
 			//if (!WinHttpQueryHeaders(m_hRequest,
-			//	WINHTTP_QUERY_STATUS_CODE | WINHTTP_QUERY_FLAG_NUMBER,	// �X�e�[�^�X�R�[�h��DWORD�^�Ŏ擾����B
-			//	WINHTTP_HEADER_NAME_BY_INDEX,	// �w�b�_�[���̃|�C���^
-			//	&dwStatusCode,				// �o�b�t�@�[
-			//	&dwStatusCodeSize,			// �o�b�t�@�[�T�C�Y
-			//	WINHTTP_NO_HEADER_INDEX))		// �ŏ��ɔ��������w�b�_�[�̂ݎ��o��
+			//	WINHTTP_QUERY_STATUS_CODE | WINHTTP_QUERY_FLAG_NUMBER,	// ステータスコードをDWORD型で取得する。
+			//	WINHTTP_HEADER_NAME_BY_INDEX,	// ヘッダー名のポインタ
+			//	&dwStatusCode,				// バッファー
+			//	&dwStatusCodeSize,			// バッファーサイズ
+			//	WINHTTP_NO_HEADER_INDEX))		// 最初に発生したヘッダーのみ取り出す
 			//{
-			//	printf_s(_T("WinHttpQueryHeaders()�Ɏ��s"));
+			//	printf_s(_T("WinHttpQueryHeaders()に失敗"));
 			//	return;
 			//}
 			//if (HTTP_STATUS_OK != dwStatusCode)
 			//{
-			//	printf_s(_T("�X�e�[�^�X�R�[�h�Ƃ���OK���Ԃ��Ă��Ȃ�����"));
+			//	printf_s(_T("ステータスコードとしてOKが返ってこなかった"));
 			//	return;
 			//}
 	
-			//// ���X�|���X�f�[�^�f�[�^�₢���킹
+			//// レスポンスデータデータ問い合わせ
 			//if (!WinHttpQueryDataAvailable(m_hRequest, NULL))
 			//{
-			//	printf_s(_T("WinHttpQueryDataAvailable()�Ɏ��s"));
+			//	printf_s(_T("WinHttpQueryDataAvailable()に失敗"));
 			//	return;
 			//}
 		}
 		break;
 	case WINHTTP_CALLBACK_STATUS_DATA_AVAILABLE:
-		// �f�[�^�̎擾�\
+		// データの取得可能
 		OutputDebugString(_T("InternetStatus = DATA_AVAILABLE\n"));
 		{
 			//DWORD dwSize = *((LPDWORD)lpvStatusInformation);
 			//if (0 == dwSize)
-			//{	// �ǂݍ��ݏI��->�R�[���o�b�N�I��
+			//{	// 読み込み終了->コールバック終了
 			//	RequestSucceeded();
 			//	return;
 			//}
 	
-			//// ���X�|���X�f�[�^�ǂݍ���
+			//// レスポンスデータ読み込み
 			//DWORD dwLength = dwSize + 1;
 			//char* pszBuffer = (char*)malloc(dwLength * sizeof(char));
 			//if (!WinHttpReadData(m_hRequest,
-			//	pszBuffer,		// �o�b�t�@�[
-			//	dwSize,			// �ǂݍ��ރo�C�g��
+			//	pszBuffer,		// バッファー
+			//	dwSize,			// 読み込むバイト数
 			//	NULL))
 			//{
 			//	free(pszBuffer);
-			//	printf_s(_T("WinHttpReadData()�Ɏ��s"));
+			//	printf_s(_T("WinHttpReadData()に失敗"));
 			//	return;
 			//}
-			//// �o�b�t�@�[�͉���͂����ɏI���B
-			//// WinHttpReadData()�����O�ɁA�R�[���o�b�N�֐���WINHTTP_CALLBACK_STATUS_READ_COMPLETE�ŌĂ΂��B
-			//// �o�b�t�@�[�́A�R�[���o�b�N�֐���WINHTTP_CALLBACK_STATUS_READ_COMPLETE���ɏ�������B
+			//// バッファーは解放はせずに終了。
+			//// WinHttpReadData()完了前に、コールバック関数がWINHTTP_CALLBACK_STATUS_READ_COMPLETEで呼ばれる。
+			//// バッファーは、コールバック関数のWINHTTP_CALLBACK_STATUS_READ_COMPLETE時に処理する。
 		}
 		break;
 	case WINHTTP_CALLBACK_STATUS_READ_COMPLETE:
@@ -798,10 +891,10 @@ void CALLBACK InternetCallback(HINTERNET hInternet,
 		//	m_ssRead << pszBuffer;
 		//	free(pszBuffer);
 	
-		//	// ���X�|���X�f�[�^�f�[�^�₢���킹
+		//	// レスポンスデータデータ問い合わせ
 		//	if (!WinHttpQueryDataAvailable(m_hRequest, NULL))
 		//	{
-		//		printf_s(_T("WinHttpQueryDataAvailable()�Ɏ��s"));
+		//		printf_s(_T("WinHttpQueryDataAvailable()に失敗"));
 		//		return;
 		//	}
 		//}
