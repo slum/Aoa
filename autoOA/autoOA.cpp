@@ -55,9 +55,9 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 
 	if (lstrlen(lpCmdLine) == 0) {
 
-		GetPrivateProfileStringW(L"UserData", L"Uid", L"", uid, sizeof(uid), L"C:\\autoOA\\autoOA.ini");
-		GetPrivateProfileStringW(L"UserData", L"UPassword", L"", upassword, sizeof(upassword), L"C:\\autoOA\\autoOA.ini");
-		GetPrivateProfileString("UserData", "Key", "", urlKey, sizeof(urlKey), "C:\\autoOA\\autoOA.ini");
+		GetPrivateProfileStringW(L"UserData", L"Uid", L"", uid, sizeof(uid), L"ini\\autoOA.ini");
+		GetPrivateProfileStringW(L"UserData", L"UPassword", L"", upassword, sizeof(upassword), L"ini\\autoOA.ini");
+		GetPrivateProfileString("UserData", "Key", "", urlKey, sizeof(urlKey), "ini\\autoOA.ini");
 	}
 	else {
 
