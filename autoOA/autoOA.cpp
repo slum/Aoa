@@ -15,8 +15,10 @@ TCHAR szWindowClass[MAX_LOADSTRING];			// メイン ウィンドウ クラス名
 
 LPTSTR m_urlKey; // 社員ナンバー/キー 
 LPTSTR m_inqSec;
+LPTSTR m_lastHour;
 LPCWCHAR m_uid;
 LPCWCHAR m_pass;
+
 
 
 // このコード モジュールに含まれる関数の宣言を転送します:
@@ -39,17 +41,17 @@ void CALLBACK TimerProc(
 );
 
 int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
-                     _In_opt_ HINSTANCE hPrevInstance,
-                     _In_ LPTSTR    lpCmdLine,
-                     _In_ int       nCmdShow)
+	_In_opt_ HINSTANCE hPrevInstance,
+	_In_ LPTSTR    lpCmdLine,
+	_In_ int       nCmdShow)
 {
 	UNREFERENCED_PARAMETER(hPrevInstance);
 	UNREFERENCED_PARAMETER(lpCmdLine);
 
- 	// TODO: ここにコードを挿入してください。
+	// TODO: ここにコードを挿入してください。
 	MSG msg;
 	HACCEL hAccelTable;
-	
+
 	// グローバル文字列を初期化しています。
 	LoadString(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
 	LoadString(hInstance, IDC_AUTOOA, szWindowClass, MAX_LOADSTRING);
@@ -59,16 +61,19 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 	WCHAR upassword[100];
 	CHAR urlKey[100];
 	CHAR inqSec[100];
+	CHAR lastHour[100];
 	m_uid = uid;
 	m_pass = upassword;
 	m_urlKey = urlKey;
 	m_inqSec = inqSec;
+	m_lastHour = lastHour;
 
 	if (lstrlen(lpCmdLine) == 0) {
 
 		GetPrivateProfileStringW(L"UserData", L"Uid", L"", uid, sizeof(uid), L"ini\\autoOA.ini");
 		GetPrivateProfileStringW(L"UserData", L"UPassword", L"", upassword, sizeof(upassword), L"ini\\autoOA.ini");
 		GetPrivateProfileString("InqTime", "InqTime", "", inqSec, sizeof(inqSec), "ini\\autoOA.ini");
+		GetPrivateProfileString("lastHour", "lastHour", "", lastHour, sizeof(lastHour), "ini\\autoOA.ini");
 		GetPrivateProfileString("UserData", "Key", "", urlKey, sizeof(urlKey), "ini\\autoOA.ini");
 	}
 	else {
@@ -82,19 +87,20 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 
 		GetPrivateProfileStringW(L"UserData", L"Uid", L"", uid, sizeof(uid), wcstring);
 		GetPrivateProfileStringW(L"UserData", L"UPassword", L"", upassword, sizeof(upassword), wcstring);
-		GetPrivateProfileString("InqTime", "InqTime", "", inqSec, sizeof(inqSec), "ini\\autoOA.ini");
+		GetPrivateProfileString("InqTime", "InqTime", "", inqSec, sizeof(inqSec), lpCmdLine);
+		GetPrivateProfileString("lastHour", "lastHour", "", lastHour, sizeof(lastHour), lpCmdLine);
 		GetPrivateProfileString("UserData", "Key", "", urlKey, sizeof(urlKey), lpCmdLine);
 
 	}
 
 	// アプリケーションの初期化を実行します:
-	if (!InitInstance (hInstance, nCmdShow))
+	if (!InitInstance(hInstance, nCmdShow))
 	{
 		return FALSE;
 	}
 
 	hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_AUTOOA));
-	
+
 	SetTimer(m_mainWnd, INQ_TIMER_ID, atoi(m_inqSec), TimerProc);
 
 	// メイン メッセージ ループ:
@@ -107,7 +113,7 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 		}
 	}
 
-	return (int) msg.wParam;
+	return (int)msg.wParam;
 }
 
 void CALLBACK TimerProc(
@@ -116,7 +122,16 @@ void CALLBACK TimerProc(
 	UINT_PTR idEvent,  // タイマの識別子
 	DWORD dwTime       // 現在のシステム時刻
 ) {
-	Leave();
+
+	SYSTEMTIME time;
+
+	GetLocalTime(&time);
+
+	if (atoi(m_lastHour) >= time.wHour) {
+		Leave();
+	}
+
+	KillTimer(m_mainWnd, INQ_TIMER_ID);
 }
 
 
