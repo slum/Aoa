@@ -1,0 +1,9 @@
+﻿################################################################################
+# This .gitignore file was automatically created by Microsoft(R) Visual Studio.
+################################################################################
+
+/.vs/autoOA/v14
+/autoOA/Debug
+/ipch/AUTOOA-6a05d82f
+/autoOA.VC.db
+/autoOA.VC.VC.opendb

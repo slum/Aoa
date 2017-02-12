@@ -5,6 +5,7 @@
 #include "autoOA.h"
 
 #define MAX_LOADSTRING 100
+#define INQ_TIMER_ID 1000
 
 // グローバル変数:
 HINSTANCE hInst;								// 現在のインターフェイス
@@ -13,8 +14,10 @@ TCHAR szTitle[MAX_LOADSTRING];					// タイトル バーのテキスト
 TCHAR szWindowClass[MAX_LOADSTRING];			// メイン ウィンドウ クラス名
 
 LPTSTR m_urlKey; // 社員ナンバー/キー 
+LPTSTR m_inqSec;
 LPCWCHAR m_uid;
 LPCWCHAR m_pass;
+
 
 // このコード モジュールに含まれる関数の宣言を転送します:
 ATOM				MyRegisterClass(HINSTANCE hInstance);
@@ -28,6 +31,12 @@ BOOL                Att();
 BOOL                Leave();
 BOOL Ballon(LPSTR, LPSTR, DWORD, UINT);
 void CALLBACK		InternetCallback(HINTERNET, DWORD_PTR, DWORD, LPVOID, DWORD);
+void CALLBACK TimerProc(
+	HWND hwnd,         // ウィンドウのハンドル
+	UINT uMsg,         // WM_TIMER メッセージ
+	UINT_PTR idEvent,  // タイマの識別子
+	DWORD dwTime       // 現在のシステム時刻
+);
 
 int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
                      _In_opt_ HINSTANCE hPrevInstance,
@@ -49,14 +58,17 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 	WCHAR uid[100];
 	WCHAR upassword[100];
 	CHAR urlKey[100];
+	CHAR inqSec[100];
 	m_uid = uid;
 	m_pass = upassword;
 	m_urlKey = urlKey;
+	m_inqSec = inqSec;
 
 	if (lstrlen(lpCmdLine) == 0) {
 
 		GetPrivateProfileStringW(L"UserData", L"Uid", L"", uid, sizeof(uid), L"ini\\autoOA.ini");
 		GetPrivateProfileStringW(L"UserData", L"UPassword", L"", upassword, sizeof(upassword), L"ini\\autoOA.ini");
+		GetPrivateProfileString("InqTime", "InqTime", "", inqSec, sizeof(inqSec), "ini\\autoOA.ini");
 		GetPrivateProfileString("UserData", "Key", "", urlKey, sizeof(urlKey), "ini\\autoOA.ini");
 	}
 	else {
@@ -70,6 +82,7 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 
 		GetPrivateProfileStringW(L"UserData", L"Uid", L"", uid, sizeof(uid), wcstring);
 		GetPrivateProfileStringW(L"UserData", L"UPassword", L"", upassword, sizeof(upassword), wcstring);
+		GetPrivateProfileString("InqTime", "InqTime", "", inqSec, sizeof(inqSec), "ini\\autoOA.ini");
 		GetPrivateProfileString("UserData", "Key", "", urlKey, sizeof(urlKey), lpCmdLine);
 
 	}
@@ -81,6 +94,8 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 	}
 
 	hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_AUTOOA));
+	
+	SetTimer(m_mainWnd, INQ_TIMER_ID, atoi(m_inqSec), TimerProc);
 
 	// メイン メッセージ ループ:
 	while (GetMessage(&msg, NULL, 0, 0))
@@ -93,6 +108,15 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 	}
 
 	return (int) msg.wParam;
+}
+
+void CALLBACK TimerProc(
+	HWND hwnd,         // ウィンドウのハンドル
+	UINT uMsg,         // WM_TIMER メッセージ
+	UINT_PTR idEvent,  // タイマの識別子
+	DWORD dwTime       // 現在のシステム時刻
+) {
+	Leave();
 }
 
 
@@ -457,8 +481,6 @@ BOOL CallHttpRequest(LPCWCHAR addr)
 			{
 				bDone = TRUE;
 				// TipError
-
-
 
 			}
 				
