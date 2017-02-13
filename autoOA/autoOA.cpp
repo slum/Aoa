@@ -13,11 +13,16 @@ HWND m_mainWnd;
 TCHAR szTitle[MAX_LOADSTRING];					// タイトル バーのテキスト
 TCHAR szWindowClass[MAX_LOADSTRING];			// メイン ウィンドウ クラス名
 
-LPTSTR m_urlKey; // 社員ナンバー/キー 
+//LPTSTR m_addr; // 社員ナンバー/キー 
+//LPTSTR m_urlKey; // 社員ナンバー/キー 
 LPTSTR m_inqSec;
 LPTSTR m_lastHour;
 LPCWCHAR m_uid;
 LPCWCHAR m_pass;
+
+LPCWCHAR m_attAddr;
+LPCWCHAR m_leaveAddr;
+
 
 
 
@@ -38,7 +43,7 @@ void CALLBACK TimerProc(
 	UINT uMsg,         // WM_TIMER メッセージ
 	UINT_PTR idEvent,  // タイマの識別子
 	DWORD dwTime       // 現在のシステム時刻
-);
+	);
 
 int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 	_In_opt_ HINSTANCE hPrevInstance,
@@ -59,12 +64,16 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 
 	WCHAR uid[100];
 	WCHAR upassword[100];
-	CHAR urlKey[100];
+	WCHAR attAddr[100];
+	WCHAR leaveAddr[100];
 	CHAR inqSec[100];
 	CHAR lastHour[100];
 	m_uid = uid;
 	m_pass = upassword;
-	m_urlKey = urlKey;
+	//m_addr = addr;
+	//m_urlKey = urlKey;
+	m_attAddr = attAddr;
+	m_leaveAddr = leaveAddr;
 	m_inqSec = inqSec;
 	m_lastHour = lastHour;
 
@@ -72,9 +81,12 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 
 		GetPrivateProfileStringW(L"UserData", L"Uid", L"", uid, sizeof(uid), L"ini\\autoOA.ini");
 		GetPrivateProfileStringW(L"UserData", L"UPassword", L"", upassword, sizeof(upassword), L"ini\\autoOA.ini");
-		GetPrivateProfileString("InqTime", "InqTime", "", inqSec, sizeof(inqSec), "ini\\autoOA.ini");
-		GetPrivateProfileString("lastHour", "lastHour", "", lastHour, sizeof(lastHour), "ini\\autoOA.ini");
-		GetPrivateProfileString("UserData", "Key", "", urlKey, sizeof(urlKey), "ini\\autoOA.ini");
+		//GetPrivateProfileString("UserData", "Addr", "", addr, sizeof(addr), "ini\\autoOA.ini");
+		//GetPrivateProfileString("UserData", "Key", "", urlKey, sizeof(urlKey), "ini\\autoOA.ini");
+		GetPrivateProfileStringW(L"UserData", L"AttAddr", L"", attAddr, sizeof(attAddr), L"ini\\autoOA.ini");
+		GetPrivateProfileStringW(L"UserData", L"LeaveAddr", L"", leaveAddr, sizeof(leaveAddr), L"ini\\autoOA.ini");
+		GetPrivateProfileString("Timer", "InqTime", "", inqSec, sizeof(inqSec), "ini\\autoOA.ini");
+		GetPrivateProfileString("Timer", "LastHour", "", lastHour, sizeof(lastHour), "ini\\autoOA.ini");
 	}
 	else {
 
@@ -87,9 +99,12 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 
 		GetPrivateProfileStringW(L"UserData", L"Uid", L"", uid, sizeof(uid), wcstring);
 		GetPrivateProfileStringW(L"UserData", L"UPassword", L"", upassword, sizeof(upassword), wcstring);
-		GetPrivateProfileString("InqTime", "InqTime", "", inqSec, sizeof(inqSec), lpCmdLine);
-		GetPrivateProfileString("lastHour", "lastHour", "", lastHour, sizeof(lastHour), lpCmdLine);
-		GetPrivateProfileString("UserData", "Key", "", urlKey, sizeof(urlKey), lpCmdLine);
+		//GetPrivateProfileString("UserData", "Key", "", urlKey, sizeof(urlKey), lpCmdLine);
+		//GetPrivateProfileString("UserData", "Addr", "", addr, sizeof(addr), lpCmdLine);
+		GetPrivateProfileStringW(L"UserData", L"AttAddr", L"", attAddr, sizeof(attAddr), wcstring);
+		GetPrivateProfileStringW(L"UserData", L"LeaveAddr", L"", leaveAddr, sizeof(leaveAddr), wcstring);
+		GetPrivateProfileString("Timer", "InqTime", "", inqSec, sizeof(inqSec), lpCmdLine);
+		GetPrivateProfileString("Timer", "lastHour", "", lastHour, sizeof(lastHour), lpCmdLine);
 
 	}
 
@@ -101,7 +116,7 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 
 	hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_AUTOOA));
 
-	SetTimer(m_mainWnd, INQ_TIMER_ID, atoi(m_inqSec), TimerProc);
+	SetTimer(m_mainWnd, INQ_TIMER_ID, atoi(m_inqSec) * 1000, TimerProc);
 
 	// メイン メッセージ ループ:
 	while (GetMessage(&msg, NULL, 0, 0))
@@ -121,7 +136,7 @@ void CALLBACK TimerProc(
 	UINT uMsg,         // WM_TIMER メッセージ
 	UINT_PTR idEvent,  // タイマの識別子
 	DWORD dwTime       // 現在のシステム時刻
-) {
+	) {
 
 	SYSTEMTIME time;
 
@@ -129,6 +144,7 @@ void CALLBACK TimerProc(
 
 	if (atoi(m_lastHour) >= time.wHour) {
 		Leave();
+		return;
 	}
 
 	KillTimer(m_mainWnd, INQ_TIMER_ID);
@@ -146,17 +162,17 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
 
 	wcex.cbSize = sizeof(WNDCLASSEX);
 
-	wcex.style			= CS_HREDRAW | CS_VREDRAW;
-	wcex.lpfnWndProc	= WndProc;
-	wcex.cbClsExtra		= 0;
-	wcex.cbWndExtra		= 0;
-	wcex.hInstance		= hInstance;
-	wcex.hIcon			= LoadIcon(hInstance, MAKEINTRESOURCE(IDI_AUTOOA));
-	wcex.hCursor		= LoadCursor(NULL, IDC_ARROW);
-	wcex.hbrBackground	= (HBRUSH)(COLOR_WINDOW+1);
-	wcex.lpszMenuName	= MAKEINTRESOURCE(IDC_AUTOOA);
-	wcex.lpszClassName	= szWindowClass;
-	wcex.hIconSm		= LoadIcon(wcex.hInstance, MAKEINTRESOURCE(IDI_SMALL));
+	wcex.style = CS_HREDRAW | CS_VREDRAW;
+	wcex.lpfnWndProc = WndProc;
+	wcex.cbClsExtra = 0;
+	wcex.cbWndExtra = 0;
+	wcex.hInstance = hInstance;
+	wcex.hIcon = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_AUTOOA));
+	wcex.hCursor = LoadCursor(NULL, IDC_ARROW);
+	wcex.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
+	wcex.lpszMenuName = MAKEINTRESOURCE(IDC_AUTOOA);
+	wcex.lpszClassName = szWindowClass;
+	wcex.hIconSm = LoadIcon(wcex.hInstance, MAKEINTRESOURCE(IDI_SMALL));
 
 	return RegisterClassEx(&wcex);
 }
@@ -360,7 +376,7 @@ BOOL CallHttpRequest(LPCWCHAR addr)
 
 			// End the request.
 			if (bResults)
-				bResults = WinHttpReceiveResponse(m_hRequest, NULL); 
+				bResults = WinHttpReceiveResponse(m_hRequest, NULL);
 
 			// Resend the request in case of 
 			// ERROR_WINHTTP_RESEND_REQUEST error.
@@ -498,7 +514,7 @@ BOOL CallHttpRequest(LPCWCHAR addr)
 				// TipError
 
 			}
-				
+
 		}
 
 		// Report any errors.
@@ -521,15 +537,16 @@ BOOL Att() {
 
 	DWORD bResult;
 
-	size_t origsize = strlen(m_urlKey) + 1;
-	const size_t newsize = 100;
-	size_t convertedChars = 0;
-	wchar_t wcstring[newsize];
-	ZeroMemory(wcstring, sizeof(wcstring));
-	wcscat_s(wcstring, L"http://*/*/");
-	mbstowcs_s(&convertedChars, &wcstring[lstrlenW(L"http://*/*/")], origsize, m_urlKey, _TRUNCATE);
+	//size_t origsize = strlen(m_urlKey) + 1;
+	//const size_t newsize = 100;
+	//size_t convertedChars = 0;
+	//wchar_t wcstring[newsize];
+	//ZeroMemory(wcstring, sizeof(wcstring));
+	//wcscat_s(wcstring, L"http://http://ndcokinmu.appspot.com/att/");
+	//mbstowcs_s(&convertedChars, &wcstring[lstrlenW(L"http://http://ndcokinmu.appspot.com/att/")], origsize, m_urlKey, _TRUNCATE);
 
-	bResult = CallHttpRequest(wcstring);
+	//bResult = CallHttpRequest(wcstring);
+	bResult = CallHttpRequest(m_attAddr);
 	if (bResult != CALLHTTPREQUEST_OK_FININSHED) {
 		Ballon("ERROR", "ERROR", NIIF_ERROR, NULL);
 	}
@@ -541,15 +558,16 @@ BOOL Leave() {
 
 	DWORD bResult;
 
-	size_t origsize = strlen(m_urlKey) + 1;
-	const size_t newsize = 100;
-	size_t convertedChars = 0;
-	wchar_t wcstring[newsize];
-	ZeroMemory(wcstring, sizeof(wcstring));
-	wcscat_s(wcstring, L"http://*/*/");
-	mbstowcs_s(&convertedChars, &wcstring[lstrlenW(L"http://*/*/")], origsize, m_urlKey, _TRUNCATE);
+	//size_t origsize = strlen(m_urlKey) + 1;
+	//const size_t newsize = 100;
+	//size_t convertedChars = 0;
+	//wchar_t wcstring[newsize];
+	//ZeroMemory(wcstring, sizeof(wcstring));
+	//wcscat_s(wcstring, L"http://*/*/");
+	//mbstowcs_s(&convertedChars, &wcstring[lstrlenW(L"http://*/*/")], origsize, m_urlKey, _TRUNCATE);
 
-	bResult = CallHttpRequest(wcstring);
+	//bResult = CallHttpRequest(wcstring);
+	bResult = CallHttpRequest(m_leaveAddr);
 	if (bResult != CALLHTTPREQUEST_OK_FININSHED) {
 		Ballon("ERROR", "ERROR", NIIF_ERROR, NULL);
 	}
@@ -569,39 +587,39 @@ BOOL Leave() {
 //
 BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 {
-   HWND hWnd;
+	HWND hWnd;
 
-   hInst = hInstance; // グローバル変数にインスタンス処理を格納します。
-   //system("att.bat");
+	hInst = hInstance; // グローバル変数にインスタンス処理を格納します。
+	//system("att.bat");
 
-   hWnd = CreateWindow(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
-      CW_USEDEFAULT, 0, CW_USEDEFAULT, 0, NULL, NULL, hInstance, NULL);
+	hWnd = CreateWindow(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
+		CW_USEDEFAULT, 0, CW_USEDEFAULT, 0, NULL, NULL, hInstance, NULL);
 
-   if (!hWnd)
-   {
-      return FALSE;
-   }
+	if (!hWnd)
+	{
+		return FALSE;
+	}
 
-   m_mainWnd = hWnd;
+	m_mainWnd = hWnd;
 
-   // イン
-   Att();
+	// イン
+	Att();
 
-   //ShowWindow(hWnd, nCmdShow);
-   //UpdateWindow(hWnd);
+	//ShowWindow(hWnd, nCmdShow);
+	//UpdateWindow(hWnd);
 
-   NOTIFYICONDATA notifyData;
-   notifyData.cbSize = sizeof(notifyData);
-   notifyData.hWnd = hWnd;
-   notifyData.hIcon = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_ICON1));
-   notifyData.uFlags = NIF_ICON | NIF_MESSAGE | NIF_TIP;
-   notifyData.uCallbackMessage = OA_MS_SYSTEMTRAY;
-   notifyData.uVersion = NOTIFYICON_VERSION_4;
-   lstrcpy(notifyData.szTip, "A-z");
+	NOTIFYICONDATA notifyData;
+	notifyData.cbSize = sizeof(notifyData);
+	notifyData.hWnd = hWnd;
+	notifyData.hIcon = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_ICON1));
+	notifyData.uFlags = NIF_ICON | NIF_MESSAGE | NIF_TIP;
+	notifyData.uCallbackMessage = OA_MS_SYSTEMTRAY;
+	notifyData.uVersion = NOTIFYICON_VERSION_4;
+	lstrcpy(notifyData.szTip, "A-z");
 
-   Shell_NotifyIcon(NIM_ADD, &notifyData);
+	Shell_NotifyIcon(NIM_ADD, &notifyData);
 
-   return TRUE;
+	return TRUE;
 }
 
 BOOL Ballon(LPSTR title, LPSTR msg, DWORD dwType, UINT timeout) {
@@ -613,17 +631,17 @@ BOOL Ballon(LPSTR title, LPSTR msg, DWORD dwType, UINT timeout) {
 	lstrcpyn(notifyIconData.szInfoTitle, title, sizeof(notifyIconData.szInfoTitle));
 	lstrcpyn(notifyIconData.szInfo, msg, sizeof(notifyIconData.szInfo));
 
-		//dwType = 0;
-		//dwType = NIIF_INFO;
-		//dwType = NIIF_WARNING;
-		//dwType = NIIF_ERROR;
-		//dwType = NIIF_USER; // Use the "hBalloonIcon" parameter.
+	//dwType = 0;
+	//dwType = NIIF_INFO;
+	//dwType = NIIF_WARNING;
+	//dwType = NIIF_ERROR;
+	//dwType = NIIF_USER; // Use the "hBalloonIcon" parameter.
 	//| (bSound ? 0 : NIIF_NOSOUND)
 	//	| (bLargeIcon ? NIIF_LARGE_ICON : 0)
 	//	| (bRespectQuiteTime ? NIIF_RESPECT_QUIET_TIME : 0);
 
 	notifyIconData.dwInfoFlags = dwType;
-	
+
 	notifyIconData.uTimeout = timeout;
 	notifyIconData.hBalloonIcon = NULL;
 	notifyIconData.uFlags = NIF_INFO | NIF_GUID;
@@ -631,7 +649,8 @@ BOOL Ballon(LPSTR title, LPSTR msg, DWORD dwType, UINT timeout) {
 	if (dwType == NIIF_ERROR)
 	{
 		return MessageBox(m_mainWnd, "設定ファイル、ネットワーク接続状況を確認してください！", "接続エラー", MB_ICONERROR);
-	} else 
+	}
+	else
 	{
 		return Shell_NotifyIcon(NIM_MODIFY, &notifyIconData);
 	}
@@ -658,7 +677,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	switch (message)
 	{
 	case WM_COMMAND:
-		wmId    = LOWORD(wParam);
+		wmId = LOWORD(wParam);
 		wmEvent = HIWORD(wParam);
 		// 選択されたメニューの解析:
 		switch (wmId)
@@ -671,14 +690,14 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			break;
 		case IDM_ATT:
 		{
-			// イン
-			Att();
+						// イン
+						Att();
 		}
 			break;
 		case IDM_LEAVE:
 		{
-			// アウト
-			Leave();
+						  // アウト
+						  Leave();
 		}
 			break;
 		default:
@@ -692,10 +711,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		break;
 	case WM_QUERYENDSESSION:
 	{
-		// アウト
-		Leave();
+							   // アウト
+							   Leave();
 
-		exit(0);
+							   exit(0);
 	}
 		break;
 
@@ -706,7 +725,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			// イン
 			Att();
 		}
-		else if (wParam == PBT_APMSUSPEND) 
+		else if (wParam == PBT_APMSUSPEND)
 		{
 			// アウト
 			Leave();
@@ -718,7 +737,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		break;
 
 	case OA_MS_SYSTEMTRAY:
-		
+
 		switch (lParam)
 		{
 
@@ -769,11 +788,11 @@ void TrayMenu(HWND hWnd)
 	HMENU hpopMenu = NULL;
 	HMENU hmenu = LoadMenu(hInst, MAKEINTRESOURCE(IDR_MENU1));
 	if (hmenu)
-	{ 
+	{
 		hpopMenu = GetSubMenu(hmenu, 0);
 
 		RemoveMenu(hmenu, 0, MF_BYPOSITION);
-	    DestroyMenu(hmenu); 
+		DestroyMenu(hmenu);
 	}
 
 	GetCursorPos(&pp);
@@ -792,20 +811,20 @@ void TrayMenu(HWND hWnd)
 	{
 	case ID_IN:
 	{
-		// イン
-		Att();
-		break;
+				  // イン
+				  Att();
+				  break;
 	}
 	case ID_OUT:
 	{
-		// アウト
-		Leave();
-		break;
+				   // アウト
+				   Leave();
+				   break;
 	}
 	case ID_0_EXIT:
 	{
-		exit(0);
-		break;
+					  exit(0);
+					  break;
 	}
 	}
 
@@ -881,7 +900,7 @@ void CALLBACK InternetCallback(HINTERNET hInternet,
 			//	printf_s(_T("ステータスコードとしてOKが返ってこなかった"));
 			//	return;
 			//}
-	
+
 			//// レスポンスデータデータ問い合わせ
 			//if (!WinHttpQueryDataAvailable(m_hRequest, NULL))
 			//{
@@ -900,7 +919,7 @@ void CALLBACK InternetCallback(HINTERNET hInternet,
 			//	RequestSucceeded();
 			//	return;
 			//}
-	
+
 			//// レスポンスデータ読み込み
 			//DWORD dwLength = dwSize + 1;
 			//char* pszBuffer = (char*)malloc(dwLength * sizeof(char));
@@ -927,7 +946,7 @@ void CALLBACK InternetCallback(HINTERNET hInternet,
 		//	pszBuffer[dwStatusInformationLength] = '\0';
 		//	m_ssRead << pszBuffer;
 		//	free(pszBuffer);
-	
+
 		//	// レスポンスデータデータ問い合わせ
 		//	if (!WinHttpQueryDataAvailable(m_hRequest, NULL))
 		//	{
