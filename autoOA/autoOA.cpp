@@ -147,6 +147,8 @@ void CALLBACK TimerProc(
 		return;
 	}
 
+	// 予定時間を過ぎたら最後のカードをする
+	Leave();
 	KillTimer(m_mainWnd, INQ_TIMER_ID);
 }
 
@@ -811,20 +813,20 @@ void TrayMenu(HWND hWnd)
 	{
 	case ID_IN:
 	{
-				  // イン
-				  Att();
-				  break;
+		// イン
+		Att();
+		break;
 	}
 	case ID_OUT:
 	{
-				   // アウト
-				   Leave();
-				   break;
+		// アウト
+		Leave();
+		break;
 	}
 	case ID_0_EXIT:
 	{
-					  exit(0);
-					  break;
+		exit(0);
+		break;
 	}
 	}
 
