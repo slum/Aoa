@@ -6,6 +6,7 @@
 
 #define MAX_LOADSTRING 100
 #define INQ_TIMER_ID 1000
+#define INQ_TIMER_ID_LAST 1000
 
 // グローバル変数:
 HINSTANCE hInst;								// 現在のインターフェイス
@@ -15,15 +16,20 @@ TCHAR szWindowClass[MAX_LOADSTRING];			// メイン ウィンドウ クラス名
 
 //LPTSTR m_addr; // 社員ナンバー/キー 
 //LPTSTR m_urlKey; // 社員ナンバー/キー 
-LPTSTR m_inqSec;
-LPTSTR m_lastHour;
+UINT m_inqSec;
+UINT m_lastHour;
+
+enum TIMER_STATUS {
+	FIRST,
+	MID,
+	LAST
+} m_timer_status;
+
 LPCWCHAR m_uid;
 LPCWCHAR m_pass;
 
 LPCWCHAR m_attAddr;
 LPCWCHAR m_leaveAddr;
-
-
 
 
 // このコード モジュールに含まれる関数の宣言を転送します:
@@ -74,8 +80,6 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 	//m_urlKey = urlKey;
 	m_attAddr = attAddr;
 	m_leaveAddr = leaveAddr;
-	m_inqSec = inqSec;
-	m_lastHour = lastHour;
 
 	if (lstrlen(lpCmdLine) == 0) {
 
@@ -116,7 +120,11 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 
 	hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_AUTOOA));
 
-	SetTimer(m_mainWnd, INQ_TIMER_ID, atoi(m_inqSec) * 1000, TimerProc);
+	m_inqSec = atoi(inqSec) * 1000;
+	m_lastHour = atoi(lastHour);
+
+	m_timer_status = FIRST;
+	SetTimer(m_mainWnd, INQ_TIMER_ID, 1000, TimerProc);
 
 	// メイン メッセージ ループ:
 	while (GetMessage(&msg, NULL, 0, 0))
@@ -132,24 +140,54 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 }
 
 void CALLBACK TimerProc(
+
 	HWND hwnd,         // ウィンドウのハンドル
 	UINT uMsg,         // WM_TIMER メッセージ
 	UINT_PTR idEvent,  // タイマの識別子
 	DWORD dwTime       // 現在のシステム時刻
 	) {
 
-	SYSTEMTIME time;
+	KillTimer(m_mainWnd, INQ_TIMER_ID);
 
-	GetLocalTime(&time);
-
-	if (atoi(m_lastHour) >= time.wHour) {
+	switch (m_timer_status)
+	{
+	case FIRST:
+		break;
+	case MID:
 		Leave();
-		return;
+		break;
+	case LAST:
+		Leave();
+		break;
+	default:
+		break;
 	}
 
-	// 予定時間を過ぎたら最後のカードをする
-	Leave();
-	KillTimer(m_mainWnd, INQ_TIMER_ID);
+	// タイマー設定しないと利用しない
+	if (m_inqSec != 0) {
+
+		// 最低10分間
+		if (m_inqSec < 600 * 1000) {
+			m_inqSec = 600 * 1000;
+		}
+
+		SYSTEMTIME time;
+		GetLocalTime(&time);
+		INT w = ((m_lastHour - time.wHour) * 3600 - (time.wMinute * 60) - time.wSecond) * 1000;
+
+		if (w < 0) {
+			// すでに時間をすぎためなにもしない
+		}
+		else if (w > m_inqSec) {
+			m_timer_status = MID;
+			SetTimer(m_mainWnd, INQ_TIMER_ID, m_inqSec, TimerProc);
+		}
+		else {
+			m_timer_status = LAST;
+			SetTimer(m_mainWnd, INQ_TIMER_ID, w, TimerProc);
+		}
+	}
+
 }
 
 
@@ -544,8 +582,8 @@ BOOL Att() {
 	//size_t convertedChars = 0;
 	//wchar_t wcstring[newsize];
 	//ZeroMemory(wcstring, sizeof(wcstring));
-	//wcscat_s(wcstring, L"http://http://ndcokinmu.appspot.com/att/");
-	//mbstowcs_s(&convertedChars, &wcstring[lstrlenW(L"http://http://ndcokinmu.appspot.com/att/")], origsize, m_urlKey, _TRUNCATE);
+	//wcscat_s(wcstring, L"xx");
+	//mbstowcs_s(&convertedChars, &wcstring[lstrlenW(L"xx")], origsize, m_urlKey, _TRUNCATE);
 
 	//bResult = CallHttpRequest(wcstring);
 	bResult = CallHttpRequest(m_attAddr);
