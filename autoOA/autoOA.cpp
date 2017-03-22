@@ -1,4 +1,4 @@
-// autoOA.cpp : ƒAƒvƒŠƒP[ƒVƒ‡ƒ“‚ÌƒGƒ“ƒgƒŠ ƒ|ƒCƒ“ƒg‚ğ’è‹`‚µ‚Ü‚·B
+// autoOA.cpp : ã‚¢ãƒ—ãƒªã‚±ãƒ¼ã‚·ãƒ§ãƒ³ã®ã‚¨ãƒ³ãƒˆãƒª ãƒã‚¤ãƒ³ãƒˆã‚’å®šç¾©ã—ã¾ã™ã€‚
 //
 
 #include "stdafx.h"
@@ -8,15 +8,16 @@
 #define INQ_TIMER_ID 1000
 #define INQ_TIMER_ID_LAST 1000
 
-// ƒOƒ[ƒoƒ‹•Ï”:
-HINSTANCE hInst;								// Œ»İ‚ÌƒCƒ“ƒ^[ƒtƒFƒCƒX
+// ã‚°ãƒ­ãƒ¼ãƒãƒ«å¤‰æ•°:
+HINSTANCE hInst;								// ç¾åœ¨ã®ã‚¤ãƒ³ã‚¿ãƒ¼ãƒ•ã‚§ã‚¤ã‚¹
 HWND m_mainWnd;
-TCHAR szTitle[MAX_LOADSTRING];					// ƒ^ƒCƒgƒ‹ ƒo[‚ÌƒeƒLƒXƒg
-TCHAR szWindowClass[MAX_LOADSTRING];			// ƒƒCƒ“ ƒEƒBƒ“ƒhƒE ƒNƒ‰ƒX–¼
+TCHAR szTitle[MAX_LOADSTRING];					// ã‚¿ã‚¤ãƒˆãƒ« ãƒãƒ¼ã®ãƒ†ã‚­ã‚¹ãƒˆ
+TCHAR szWindowClass[MAX_LOADSTRING];			// ãƒ¡ã‚¤ãƒ³ ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦ ã‚¯ãƒ©ã‚¹å
 
-//LPTSTR m_addr; // Ğˆõƒiƒ“ƒo[/ƒL[ 
-//LPTSTR m_urlKey; // Ğˆõƒiƒ“ƒo[/ƒL[ 
+//LPTSTR m_addr; // ç¤¾å“¡ãƒŠãƒ³ãƒãƒ¼/ã‚­ãƒ¼ 
+//LPTSTR m_urlKey; // ç¤¾å“¡ãƒŠãƒ³ãƒãƒ¼/ã‚­ãƒ¼ 
 UINT m_inqSec;
+UINT m_firstHour;
 UINT m_lastHour;
 
 enum TIMER_STATUS {
@@ -32,7 +33,7 @@ LPCWCHAR m_attAddr;
 LPCWCHAR m_leaveAddr;
 
 
-// ‚±‚ÌƒR[ƒh ƒ‚ƒWƒ…[ƒ‹‚ÉŠÜ‚Ü‚ê‚éŠÖ”‚ÌéŒ¾‚ğ“]‘—‚µ‚Ü‚·:
+// ã“ã®ã‚³ãƒ¼ãƒ‰ ãƒ¢ã‚¸ãƒ¥ãƒ¼ãƒ«ã«å«ã¾ã‚Œã‚‹é–¢æ•°ã®å®£è¨€ã‚’è»¢é€ã—ã¾ã™:
 ATOM				MyRegisterClass(HINSTANCE hInstance);
 BOOL				InitInstance(HINSTANCE, int);
 DWORD				ChooseAuthScheme(DWORD);
@@ -45,10 +46,10 @@ BOOL                Leave();
 BOOL Ballon(LPSTR, LPSTR, DWORD, UINT);
 void CALLBACK		InternetCallback(HINTERNET, DWORD_PTR, DWORD, LPVOID, DWORD);
 void CALLBACK TimerProc(
-	HWND hwnd,         // ƒEƒBƒ“ƒhƒE‚Ìƒnƒ“ƒhƒ‹
-	UINT uMsg,         // WM_TIMER ƒƒbƒZ[ƒW
-	UINT_PTR idEvent,  // ƒ^ƒCƒ}‚Ì¯•Êq
-	DWORD dwTime       // Œ»İ‚ÌƒVƒXƒeƒ€
+	HWND hwnd,         // ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦ã®ãƒãƒ³ãƒ‰ãƒ«
+	UINT uMsg,         // WM_TIMER ãƒ¡ãƒƒã‚»ãƒ¼ã‚¸
+	UINT_PTR idEvent,  // ã‚¿ã‚¤ãƒã®è­˜åˆ¥å­
+	DWORD dwTime       // ç¾åœ¨ã®ã‚·ã‚¹ãƒ†ãƒ æ™‚åˆ»
 	);
 
 int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
@@ -59,11 +60,11 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 	UNREFERENCED_PARAMETER(hPrevInstance);
 	UNREFERENCED_PARAMETER(lpCmdLine);
 
-	// TODO: ‚±‚±‚ÉƒR[ƒh‚ğ‘}“ü‚µ‚Ä‚­‚¾‚³‚¢B
+	// TODO: ã“ã“ã«ã‚³ãƒ¼ãƒ‰ã‚’æŒ¿å…¥ã—ã¦ãã ã•ã„ã€‚
 	MSG msg;
 	HACCEL hAccelTable;
 
-	// ƒOƒ[ƒoƒ‹•¶š—ñ‚ğ‰Šú‰»‚µ‚Ä‚¢‚Ü‚·B
+	// ã‚°ãƒ­ãƒ¼ãƒãƒ«æ–‡å­—åˆ—ã‚’åˆæœŸåŒ–ã—ã¦ã„ã¾ã™ã€‚
 	LoadString(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
 	LoadString(hInstance, IDC_AUTOOA, szWindowClass, MAX_LOADSTRING);
 	MyRegisterClass(hInstance);
@@ -73,6 +74,7 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 	WCHAR attAddr[100];
 	WCHAR leaveAddr[100];
 	CHAR inqSec[100];
+	CHAR firstHour[100];
 	CHAR lastHour[100];
 	m_uid = uid;
 	m_pass = upassword;
@@ -90,6 +92,7 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 		GetPrivateProfileStringW(L"UserData", L"AttAddr", L"", attAddr, sizeof(attAddr), L"ini\\autoOA.ini");
 		GetPrivateProfileStringW(L"UserData", L"LeaveAddr", L"", leaveAddr, sizeof(leaveAddr), L"ini\\autoOA.ini");
 		GetPrivateProfileString("Timer", "InqTime", "", inqSec, sizeof(inqSec), "ini\\autoOA.ini");
+		//GetPrivateProfileString("Timer", "FirstHour", "", firstHour, sizeof(firstHour), "ini\\autoOA.ini");
 		GetPrivateProfileString("Timer", "LastHour", "", lastHour, sizeof(lastHour), "ini\\autoOA.ini");
 	}
 	else {
@@ -108,11 +111,12 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 		GetPrivateProfileStringW(L"UserData", L"AttAddr", L"", attAddr, sizeof(attAddr), wcstring);
 		GetPrivateProfileStringW(L"UserData", L"LeaveAddr", L"", leaveAddr, sizeof(leaveAddr), wcstring);
 		GetPrivateProfileString("Timer", "InqTime", "", inqSec, sizeof(inqSec), lpCmdLine);
-		GetPrivateProfileString("Timer", "lastHour", "", lastHour, sizeof(lastHour), lpCmdLine);
+		//GetPrivateProfileString("Timer", "FirstHour", "", firstHour, sizeof(firstHour), lpCmdLine);
+		GetPrivateProfileString("Timer", "LastHour", "", lastHour, sizeof(lastHour), lpCmdLine);
 
 	}
 
-	// ƒAƒvƒŠƒP[ƒVƒ‡ƒ“‚Ì‰Šú‰»‚ğÀs‚µ‚Ü‚·:
+	// ã‚¢ãƒ—ãƒªã‚±ãƒ¼ã‚·ãƒ§ãƒ³ã®åˆæœŸåŒ–ã‚’å®Ÿè¡Œã—ã¾ã™:
 	if (!InitInstance(hInstance, nCmdShow))
 	{
 		return FALSE;
@@ -126,7 +130,7 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 	m_timer_status = FIRST;
 	SetTimer(m_mainWnd, INQ_TIMER_ID, 1000, TimerProc);
 
-	// ƒƒCƒ“ ƒƒbƒZ[ƒW ƒ‹[ƒv:
+	// ãƒ¡ã‚¤ãƒ³ ãƒ¡ãƒƒã‚»ãƒ¼ã‚¸ ãƒ«ãƒ¼ãƒ—:
 	while (GetMessage(&msg, NULL, 0, 0))
 	{
 		if (!TranslateAccelerator(msg.hwnd, hAccelTable, &msg))
@@ -141,10 +145,10 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 
 void CALLBACK TimerProc(
 
-	HWND hwnd,         // ƒEƒBƒ“ƒhƒE‚Ìƒnƒ“ƒhƒ‹
-	UINT uMsg,         // WM_TIMER ƒƒbƒZ[ƒW
-	UINT_PTR idEvent,  // ƒ^ƒCƒ}‚Ì¯•Êq
-	DWORD dwTime       // Œ»İ‚ÌƒVƒXƒeƒ€
+	HWND hwnd,         // ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦ã®ãƒãƒ³ãƒ‰ãƒ«
+	UINT uMsg,         // WM_TIMER ãƒ¡ãƒƒã‚»ãƒ¼ã‚¸
+	UINT_PTR idEvent,  // ã‚¿ã‚¤ãƒã®è­˜åˆ¥å­
+	DWORD dwTime       // ç¾åœ¨ã®ã‚·ã‚¹ãƒ†ãƒ æ™‚åˆ»
 	) {
 
 	KillTimer(m_mainWnd, INQ_TIMER_ID);
@@ -163,10 +167,10 @@ void CALLBACK TimerProc(
 		break;
 	}
 
-	// ƒ^ƒCƒ}[İ’è‚µ‚È‚¢‚Æ—˜—p‚µ‚È‚¢
+	// ã‚¿ã‚¤ãƒãƒ¼è¨­å®šã—ãªã„ã¨åˆ©ç”¨ã—ãªã„
 	if (m_inqSec != 0) {
 
-		// Å’á10•ªŠÔ
+		// æœ€ä½10åˆ†é–“
 		if (m_inqSec < 600 * 1000) {
 			m_inqSec = 600 * 1000;
 		}
@@ -176,7 +180,12 @@ void CALLBACK TimerProc(
 		INT w = ((m_lastHour - time.wHour) * 3600 - (time.wMinute * 60) - time.wSecond) * 1000;
 
 		if (w < 0) {
-			// ‚·‚Å‚ÉŠÔ‚ğ‚·‚¬‚½‚ß‚È‚É‚à‚µ‚È‚¢
+			// ã¾ãšã‚«ãƒ¼ãƒ‰ã‚’ã—ã¦ã€å¾Œã¯æ˜æ—¥ã®ï¼™æ™‚åŠã«è¨­å®š
+			Att();
+			// æ˜æ—¥ã®9æ™‚åŠï¼24+9.5
+			w = ((33.5 - time.wHour) * 3600 - (time.wMinute * 60) - time.wSecond) * 1000;
+
+			SetTimer(m_mainWnd, INQ_TIMER_ID, m_inqSec, TimerProc);
 		}
 		else if (w > m_inqSec) {
 			m_timer_status = MID;
@@ -192,9 +201,9 @@ void CALLBACK TimerProc(
 
 
 //
-//  ŠÖ”: MyRegisterClass()
+//  é–¢æ•°: MyRegisterClass()
 //
-//  –Ú“I: ƒEƒBƒ“ƒhƒE ƒNƒ‰ƒX‚ğ“o˜^‚µ‚Ü‚·B
+//  ç›®çš„: ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦ ã‚¯ãƒ©ã‚¹ã‚’ç™»éŒ²ã—ã¾ã™ã€‚
 //
 ATOM MyRegisterClass(HINSTANCE hInstance)
 {
@@ -244,14 +253,14 @@ DWORD ChooseAuthScheme(DWORD dwSupportedSchemes)
 
 
 //
-//   ŠÖ”: InitInstance(HINSTANCE, int)
+//   é–¢æ•°: InitInstance(HINSTANCE, int)
 //
-//   –Ú“I: ƒCƒ“ƒXƒ^ƒ“ƒX ƒnƒ“ƒhƒ‹‚ğ•Û‘¶‚µ‚ÄAƒƒCƒ“ ƒEƒBƒ“ƒhƒE‚ğì¬‚µ‚Ü‚·B
+//   ç›®çš„: ã‚¤ãƒ³ã‚¹ã‚¿ãƒ³ã‚¹ ãƒãƒ³ãƒ‰ãƒ«ã‚’ä¿å­˜ã—ã¦ã€ãƒ¡ã‚¤ãƒ³ ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦ã‚’ä½œæˆã—ã¾ã™ã€‚
 //
-//   ƒRƒƒ“ƒg:
+//   ã‚³ãƒ¡ãƒ³ãƒˆ:
 //
-//        ‚±‚ÌŠÖ”‚ÅAƒOƒ[ƒoƒ‹•Ï”‚ÅƒCƒ“ƒXƒ^ƒ“ƒX ƒnƒ“ƒhƒ‹‚ğ•Û‘¶‚µA
-//        ƒƒCƒ“ ƒvƒƒOƒ‰ƒ€ ƒEƒBƒ“ƒhƒE‚ğì¬‚¨‚æ‚Ñ•\¦‚µ‚Ü‚·B
+//        ã“ã®é–¢æ•°ã§ã€ã‚°ãƒ­ãƒ¼ãƒãƒ«å¤‰æ•°ã§ã‚¤ãƒ³ã‚¹ã‚¿ãƒ³ã‚¹ ãƒãƒ³ãƒ‰ãƒ«ã‚’ä¿å­˜ã—ã€
+//        ãƒ¡ã‚¤ãƒ³ ãƒ—ãƒ­ã‚°ãƒ©ãƒ  ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦ã‚’ä½œæˆãŠã‚ˆã³è¡¨ç¤ºã—ã¾ã™ã€‚
 //
 BOOL CallHttpRequest(LPCWCHAR addr)
 {
@@ -320,7 +329,7 @@ BOOL CallHttpRequest(LPCWCHAR addr)
 			&urlcomponents))
 		{
 
-			MessageBoxW(NULL, L"URL‰ğÍ‚É¸”s", L"URL‰ğÍ‚É¸”s", 0);
+			MessageBoxW(NULL, L"URLè§£æã«å¤±æ•—", L"URLè§£æã«å¤±æ•—", 0);
 			return -1;
 		}
 
@@ -328,17 +337,17 @@ BOOL CallHttpRequest(LPCWCHAR addr)
 		wstrObjectName = urlcomponents.lpszUrlPath;
 		nPort = urlcomponents.nPort;
 
-		// HTTP‚©HTTPS‚©‚»‚êˆÈŠO‚©
+		// HTTPã‹HTTPSã‹ãã‚Œä»¥å¤–ã‹
 		DWORD dwOpenRequestFlag = (INTERNET_SCHEME_HTTPS == urlcomponents.nScheme) ? WINHTTP_FLAG_SECURE : 0;
 
-		// POST‚©GET‚©
+		// POSTã‹GETã‹
 		if (false)
 		{	// POST
 			wstrVerb = L"POST";
 			wstrHeaders = L"Content-Type: application/x-www-form-urlencoded";
 			//if (0 != tstrParameter.length())
-			//{	// ƒpƒ‰ƒ[ƒ^‚ğA‘—M‚·‚éƒIƒvƒVƒ‡ƒ“ƒf[ƒ^‚É•ÏŠ·‚·‚é
-			//	char* pszOptional = NhT2M(tstrParameter.c_str());	// char•¶š—ñ‚É•ÏŠ·
+			//{	// ãƒ‘ãƒ©ãƒ¡ãƒ¼ã‚¿ã‚’ã€é€ä¿¡ã™ã‚‹ã‚ªãƒ—ã‚·ãƒ§ãƒ³ãƒ‡ãƒ¼ã‚¿ã«å¤‰æ›ã™ã‚‹
+			//	char* pszOptional = NhT2M(tstrParameter.c_str());	// charæ–‡å­—åˆ—ã«å¤‰æ›
 			//	strOptional = pszOptional;
 			//	free(pszOptional);
 			//}
@@ -348,25 +357,25 @@ BOOL CallHttpRequest(LPCWCHAR addr)
 			wstrVerb = L"GET";
 			wstrHeaders = L"";
 			//if (0 != tstrParameter.length())
-			//{	// ƒIƒuƒWƒFƒNƒg‚Æƒpƒ‰ƒ[ƒ^‚ğu?v‚Å˜AŒ‹
+			//{	// ã‚ªãƒ–ã‚¸ã‚§ã‚¯ãƒˆã¨ãƒ‘ãƒ©ãƒ¡ãƒ¼ã‚¿ã‚’ã€Œ?ã€ã§é€£çµ
 			//	WCHAR* pwszBuffer = NhT2W(tstrParameter.c_str());
 			//	wstrObjectName += L"?" + wstring(pwszBuffer);
 			//	free(pwszBuffer);
 			//}
 		}
 
-		// HTTPÚ‘±
+		// HTTPæ¥ç¶š
 		m_hConnect = WinHttpConnect(s_hSession,
 			wstrServer,
 			nPort,
 			0);
 		if (NULL == m_hConnect)
 		{
-			MessageBoxW(NULL, L"HTTPÚ‘±‚É¸”s", L"HTTPÚ‘±‚É¸”s", 0);
+			MessageBoxW(NULL, L"HTTPæ¥ç¶šã«å¤±æ•—", L"HTTPæ¥ç¶šã«å¤±æ•—", 0);
 			return -2;
 		}
 
-		// HTTPÚ‘±‚ğŠJ‚­
+		// HTTPæ¥ç¶šã‚’é–‹ã
 		m_hRequest = WinHttpOpenRequest(m_hConnect,
 			wstrVerb,
 			wstrObjectName,
@@ -376,18 +385,18 @@ BOOL CallHttpRequest(LPCWCHAR addr)
 			dwOpenRequestFlag);
 		if (NULL == m_hRequest)
 		{
-			MessageBoxW(NULL, L"HTTPÚ‘±‚ğŠJ‚­‚É¸”s", L"HTTPÚ‘±‚ğŠJ‚­‚É¸”s", 0);
+			MessageBoxW(NULL, L"HTTPæ¥ç¶šã‚’é–‹ãã«å¤±æ•—", L"HTTPæ¥ç¶šã‚’é–‹ãã«å¤±æ•—", 0);
 			return -3;
 		}
 
 
-		//// ƒR[ƒ‹ƒoƒbƒNŠÖ”‚Ìİ’è
+		//// ã‚³ãƒ¼ãƒ«ãƒãƒƒã‚¯é–¢æ•°ã®è¨­å®š
 		//if (WINHTTP_INVALID_STATUS_CALLBACK == WinHttpSetStatusCallback(m_hConnect,
 		//	(WINHTTP_STATUS_CALLBACK)InternetCallback,
 		//	WINHTTP_CALLBACK_FLAG_ALL_NOTIFICATIONS,
 		//	NULL))
 		//{
-		//	MessageBoxW(NULL, L"ƒR[ƒ‹ƒoƒbƒN‚Ìİ’è‚É¸”s", L"ƒR[ƒ‹ƒoƒbƒN‚Ìİ’è‚É¸”s", 0);
+		//	MessageBoxW(NULL, L"ã‚³ãƒ¼ãƒ«ãƒãƒƒã‚¯ã®è¨­å®šã«å¤±æ•—", L"ã‚³ãƒ¼ãƒ«ãƒãƒƒã‚¯ã®è¨­å®šã«å¤±æ•—", 0);
 		//	return -4;
 		//}
 
@@ -616,20 +625,20 @@ BOOL Leave() {
 }
 
 //
-//   ŠÖ”: InitInstance(HINSTANCE, int)
+//   é–¢æ•°: InitInstance(HINSTANCE, int)
 //
-//   –Ú“I: ƒCƒ“ƒXƒ^ƒ“ƒX ƒnƒ“ƒhƒ‹‚ğ•Û‘¶‚µ‚ÄAƒƒCƒ“ ƒEƒBƒ“ƒhƒE‚ğì¬‚µ‚Ü‚·B
+//   ç›®çš„: ã‚¤ãƒ³ã‚¹ã‚¿ãƒ³ã‚¹ ãƒãƒ³ãƒ‰ãƒ«ã‚’ä¿å­˜ã—ã¦ã€ãƒ¡ã‚¤ãƒ³ ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦ã‚’ä½œæˆã—ã¾ã™ã€‚
 //
-//   ƒRƒƒ“ƒg:
+//   ã‚³ãƒ¡ãƒ³ãƒˆ:
 //
-//        ‚±‚ÌŠÖ”‚ÅAƒOƒ[ƒoƒ‹•Ï”‚ÅƒCƒ“ƒXƒ^ƒ“ƒX ƒnƒ“ƒhƒ‹‚ğ•Û‘¶‚µA
-//        ƒƒCƒ“ ƒvƒƒOƒ‰ƒ€ ƒEƒBƒ“ƒhƒE‚ğì¬‚¨‚æ‚Ñ•\¦‚µ‚Ü‚·B
+//        ã“ã®é–¢æ•°ã§ã€ã‚°ãƒ­ãƒ¼ãƒãƒ«å¤‰æ•°ã§ã‚¤ãƒ³ã‚¹ã‚¿ãƒ³ã‚¹ ãƒãƒ³ãƒ‰ãƒ«ã‚’ä¿å­˜ã—ã€
+//        ãƒ¡ã‚¤ãƒ³ ãƒ—ãƒ­ã‚°ãƒ©ãƒ  ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦ã‚’ä½œæˆãŠã‚ˆã³è¡¨ç¤ºã—ã¾ã™ã€‚
 //
 BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 {
 	HWND hWnd;
 
-	hInst = hInstance; // ƒOƒ[ƒoƒ‹•Ï”‚ÉƒCƒ“ƒXƒ^ƒ“ƒXˆ—‚ğŠi”[‚µ‚Ü‚·B
+	hInst = hInstance; // ã‚°ãƒ­ãƒ¼ãƒãƒ«å¤‰æ•°ã«ã‚¤ãƒ³ã‚¹ã‚¿ãƒ³ã‚¹å‡¦ç†ã‚’æ ¼ç´ã—ã¾ã™ã€‚
 	//system("att.bat");
 
 	hWnd = CreateWindow(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
@@ -642,7 +651,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 
 	m_mainWnd = hWnd;
 
-	// ƒCƒ“
+	// ã‚¤ãƒ³
 	Att();
 
 	//ShowWindow(hWnd, nCmdShow);
@@ -688,7 +697,7 @@ BOOL Ballon(LPSTR title, LPSTR msg, DWORD dwType, UINT timeout) {
 
 	if (dwType == NIIF_ERROR)
 	{
-		return MessageBox(m_mainWnd, "İ’èƒtƒ@ƒCƒ‹Aƒlƒbƒgƒ[ƒNÚ‘±ó‹µ‚ğŠm”F‚µ‚Ä‚­‚¾‚³‚¢I", "Ú‘±ƒGƒ‰[", MB_ICONERROR);
+		return MessageBox(m_mainWnd, "è¨­å®šãƒ•ã‚¡ã‚¤ãƒ«ã€ãƒãƒƒãƒˆãƒ¯ãƒ¼ã‚¯æ¥ç¶šçŠ¶æ³ã‚’ç¢ºèªã—ã¦ãã ã•ã„ï¼", "æ¥ç¶šã‚¨ãƒ©ãƒ¼", MB_ICONERROR);
 	}
 	else
 	{
@@ -699,13 +708,13 @@ BOOL Ballon(LPSTR title, LPSTR msg, DWORD dwType, UINT timeout) {
 
 
 //
-//  ŠÖ”: WndProc(HWND, UINT, WPARAM, LPARAM)
+//  é–¢æ•°: WndProc(HWND, UINT, WPARAM, LPARAM)
 //
-//  –Ú“I:    ƒƒCƒ“ ƒEƒBƒ“ƒhƒE‚ÌƒƒbƒZ[ƒW‚ğˆ—‚µ‚Ü‚·B
+//  ç›®çš„:    ãƒ¡ã‚¤ãƒ³ ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦ã®ãƒ¡ãƒƒã‚»ãƒ¼ã‚¸ã‚’å‡¦ç†ã—ã¾ã™ã€‚
 //
-//  WM_COMMAND	- ƒAƒvƒŠƒP[ƒVƒ‡ƒ“ ƒƒjƒ…[‚Ìˆ—
-//  WM_PAINT	- ƒƒCƒ“ ƒEƒBƒ“ƒhƒE‚Ì•`‰æ
-//  WM_DESTROY	- ’†~ƒƒbƒZ[ƒW‚ğ•\¦‚µ‚Ä–ß‚é
+//  WM_COMMAND	- ã‚¢ãƒ—ãƒªã‚±ãƒ¼ã‚·ãƒ§ãƒ³ ãƒ¡ãƒ‹ãƒ¥ãƒ¼ã®å‡¦ç†
+//  WM_PAINT	- ãƒ¡ã‚¤ãƒ³ ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦ã®æç”»
+//  WM_DESTROY	- ä¸­æ­¢ãƒ¡ãƒƒã‚»ãƒ¼ã‚¸ã‚’è¡¨ç¤ºã—ã¦æˆ»ã‚‹
 //
 //
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
@@ -719,7 +728,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	case WM_COMMAND:
 		wmId = LOWORD(wParam);
 		wmEvent = HIWORD(wParam);
-		// ‘I‘ğ‚³‚ê‚½ƒƒjƒ…[‚Ì‰ğÍ:
+		// é¸æŠã•ã‚ŒãŸãƒ¡ãƒ‹ãƒ¥ãƒ¼ã®è§£æ:
 		switch (wmId)
 		{
 		case IDM_ABOUT:
@@ -730,14 +739,14 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			break;
 		case IDM_ATT:
 		{
-						// ƒCƒ“
-						Att();
+			// ã‚¤ãƒ³
+			Att();
 		}
 			break;
 		case IDM_LEAVE:
 		{
-						  // ƒAƒEƒg
-						  Leave();
+			// ã‚¢ã‚¦ãƒˆ
+			Leave();
 		}
 			break;
 		default:
@@ -746,12 +755,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		break;
 	case WM_PAINT:
 		hdc = BeginPaint(hWnd, &ps);
-		// TODO: •`‰æƒR[ƒh‚ğ‚±‚±‚É’Ç‰Á‚µ‚Ä‚­‚¾‚³‚¢...
+		// TODO: æç”»ã‚³ãƒ¼ãƒ‰ã‚’ã“ã“ã«è¿½åŠ ã—ã¦ãã ã•ã„...
 		EndPaint(hWnd, &ps);
 		break;
 	case WM_QUERYENDSESSION:
 	{
-							   // ƒAƒEƒg
+							   // ã‚¢ã‚¦ãƒˆ
 							   Leave();
 
 							   exit(0);
@@ -760,15 +769,17 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 	case WM_POWERBROADCAST:
 
+		// ç¾åœ¨Updateãªã©ã§ã‚³ãƒ³ãƒ”ãƒ¥ãƒ¼ã‚¿ã‚’è‡ªå‹•çš„ã«WakeUpã‚‚ã‚ã‚Šã¾ã™ã®ã§ã€ã“ã®éƒ¨åˆ†ã‚’ä¸€å¿œå¤–ã™
+		// ã¾ã¾ï½ã€ã€Œé›»æºç®¡ç†ã®Timerã‚ˆã‚ŠWakeUpã‚’ç¦æ­¢ã™ã‚Œã°ã€ä¿ç•™ã—ã¦ã‚‚å¤§ä¸ˆå¤«ã ãŒã€‚ã€‚
 		if (wParam == PBT_APMRESUMEAUTOMATIC)
 		{
-			// ƒCƒ“
-			Att();
+			// ã‚¤ãƒ³
+			//Att();
 		}
 		else if (wParam == PBT_APMSUSPEND)
 		{
-			// ƒAƒEƒg
-			Leave();
+			// ã‚¢ã‚¦ãƒˆ
+			//Leave();
 		}
 
 		break;
@@ -851,13 +862,13 @@ void TrayMenu(HWND hWnd)
 	{
 	case ID_IN:
 	{
-		// ƒCƒ“
+		// ã‚¤ãƒ³
 		Att();
 		break;
 	}
 	case ID_OUT:
 	{
-		// ƒAƒEƒg
+		// ã‚¢ã‚¦ãƒˆ
 		Leave();
 		break;
 	}
@@ -876,7 +887,7 @@ void TrayMenu(HWND hWnd)
 	// *pResult = 0;
 }
 
-// ƒo[ƒWƒ‡ƒ“î•ñƒ{ƒbƒNƒX‚ÌƒƒbƒZ[ƒW ƒnƒ“ƒhƒ‰[‚Å‚·B
+// ãƒãƒ¼ã‚¸ãƒ§ãƒ³æƒ…å ±ãƒœãƒƒã‚¯ã‚¹ã®ãƒ¡ãƒƒã‚»ãƒ¼ã‚¸ ãƒãƒ³ãƒ‰ãƒ©ãƒ¼ã§ã™ã€‚
 INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 {
 	UNREFERENCED_PARAMETER(lParam);
@@ -908,73 +919,73 @@ void CALLBACK InternetCallback(HINTERNET hInternet,
 	switch (dwInternetStatus)
 	{
 	case WINHTTP_CALLBACK_STATUS_SENDREQUEST_COMPLETE:
-		// ƒŠƒNƒGƒXƒg‚Ì‘—MŠ®—¹
+		// ãƒªã‚¯ã‚¨ã‚¹ãƒˆã®é€ä¿¡å®Œäº†
 		OutputDebugString(_T("InternetStatus = SENDREQUEST_COMPLETE\n"));
 		{
-			//// ƒŒƒXƒ|ƒ“ƒX‚Ì“’…‚Ì‘Ò‹@
+			//// ãƒ¬ã‚¹ãƒãƒ³ã‚¹ã®åˆ°ç€ã®å¾…æ©Ÿ
 			//if (!WinHttpReceiveResponse(m_hRequest, NULL))
 			//{
-			//	printf_s(_T("WinHttpReceiveResponse()‚É¸”s"));
+			//	printf_s(_T("WinHttpReceiveResponse()ã«å¤±æ•—"));
 			//	return;
 			//}
 		}
 		break;
 	case WINHTTP_CALLBACK_STATUS_HEADERS_AVAILABLE:
-		// ƒwƒbƒ_[‚Ìæ“¾‰Â”\
+		// ãƒ˜ãƒƒãƒ€ãƒ¼ã®å–å¾—å¯èƒ½
 		OutputDebugString(_T("InternetStatus = HEADERS_AVAILABLE\n"));
 		{
 			//DWORD dwStatusCode = 0;
 			//DWORD dwStatusCodeSize = sizeof(DWORD);
 			//if (!WinHttpQueryHeaders(m_hRequest,
-			//	WINHTTP_QUERY_STATUS_CODE | WINHTTP_QUERY_FLAG_NUMBER,	// ƒXƒe[ƒ^ƒXƒR[ƒh‚ğDWORDŒ^‚Åæ“¾‚·‚éB
-			//	WINHTTP_HEADER_NAME_BY_INDEX,	// ƒwƒbƒ_[–¼‚Ìƒ|ƒCƒ“ƒ^
-			//	&dwStatusCode,				// ƒoƒbƒtƒ@[
-			//	&dwStatusCodeSize,			// ƒoƒbƒtƒ@[ƒTƒCƒY
-			//	WINHTTP_NO_HEADER_INDEX))		// Å‰‚É”­¶‚µ‚½ƒwƒbƒ_[‚Ì‚İæ‚èo‚·
+			//	WINHTTP_QUERY_STATUS_CODE | WINHTTP_QUERY_FLAG_NUMBER,	// ã‚¹ãƒ†ãƒ¼ã‚¿ã‚¹ã‚³ãƒ¼ãƒ‰ã‚’DWORDå‹ã§å–å¾—ã™ã‚‹ã€‚
+			//	WINHTTP_HEADER_NAME_BY_INDEX,	// ãƒ˜ãƒƒãƒ€ãƒ¼åã®ãƒã‚¤ãƒ³ã‚¿
+			//	&dwStatusCode,				// ãƒãƒƒãƒ•ã‚¡ãƒ¼
+			//	&dwStatusCodeSize,			// ãƒãƒƒãƒ•ã‚¡ãƒ¼ã‚µã‚¤ã‚º
+			//	WINHTTP_NO_HEADER_INDEX))		// æœ€åˆã«ç™ºç”Ÿã—ãŸãƒ˜ãƒƒãƒ€ãƒ¼ã®ã¿å–ã‚Šå‡ºã™
 			//{
-			//	printf_s(_T("WinHttpQueryHeaders()‚É¸”s"));
+			//	printf_s(_T("WinHttpQueryHeaders()ã«å¤±æ•—"));
 			//	return;
 			//}
 			//if (HTTP_STATUS_OK != dwStatusCode)
 			//{
-			//	printf_s(_T("ƒXƒe[ƒ^ƒXƒR[ƒh‚Æ‚µ‚ÄOK‚ª•Ô‚Á‚Ä‚±‚È‚©‚Á‚½"));
+			//	printf_s(_T("ã‚¹ãƒ†ãƒ¼ã‚¿ã‚¹ã‚³ãƒ¼ãƒ‰ã¨ã—ã¦OKãŒè¿”ã£ã¦ã“ãªã‹ã£ãŸ"));
 			//	return;
 			//}
 
-			//// ƒŒƒXƒ|ƒ“ƒXƒf[ƒ^ƒf[ƒ^–â‚¢‡‚í‚¹
+			//// ãƒ¬ã‚¹ãƒãƒ³ã‚¹ãƒ‡ãƒ¼ã‚¿ãƒ‡ãƒ¼ã‚¿å•ã„åˆã‚ã›
 			//if (!WinHttpQueryDataAvailable(m_hRequest, NULL))
 			//{
-			//	printf_s(_T("WinHttpQueryDataAvailable()‚É¸”s"));
+			//	printf_s(_T("WinHttpQueryDataAvailable()ã«å¤±æ•—"));
 			//	return;
 			//}
 		}
 		break;
 	case WINHTTP_CALLBACK_STATUS_DATA_AVAILABLE:
-		// ƒf[ƒ^‚Ìæ“¾‰Â”\
+		// ãƒ‡ãƒ¼ã‚¿ã®å–å¾—å¯èƒ½
 		OutputDebugString(_T("InternetStatus = DATA_AVAILABLE\n"));
 		{
 			//DWORD dwSize = *((LPDWORD)lpvStatusInformation);
 			//if (0 == dwSize)
-			//{	// “Ç‚İ‚İI—¹->ƒR[ƒ‹ƒoƒbƒNI—¹
+			//{	// èª­ã¿è¾¼ã¿çµ‚äº†->ã‚³ãƒ¼ãƒ«ãƒãƒƒã‚¯çµ‚äº†
 			//	RequestSucceeded();
 			//	return;
 			//}
 
-			//// ƒŒƒXƒ|ƒ“ƒXƒf[ƒ^“Ç‚İ‚İ
+			//// ãƒ¬ã‚¹ãƒãƒ³ã‚¹ãƒ‡ãƒ¼ã‚¿èª­ã¿è¾¼ã¿
 			//DWORD dwLength = dwSize + 1;
 			//char* pszBuffer = (char*)malloc(dwLength * sizeof(char));
 			//if (!WinHttpReadData(m_hRequest,
-			//	pszBuffer,		// ƒoƒbƒtƒ@[
-			//	dwSize,			// “Ç‚İ‚ŞƒoƒCƒg”
+			//	pszBuffer,		// ãƒãƒƒãƒ•ã‚¡ãƒ¼
+			//	dwSize,			// èª­ã¿è¾¼ã‚€ãƒã‚¤ãƒˆæ•°
 			//	NULL))
 			//{
 			//	free(pszBuffer);
-			//	printf_s(_T("WinHttpReadData()‚É¸”s"));
+			//	printf_s(_T("WinHttpReadData()ã«å¤±æ•—"));
 			//	return;
 			//}
-			//// ƒoƒbƒtƒ@[‚Í‰ğ•ú‚Í‚¹‚¸‚ÉI—¹B
-			//// WinHttpReadData()Š®—¹‘O‚ÉAƒR[ƒ‹ƒoƒbƒNŠÖ”‚ªWINHTTP_CALLBACK_STATUS_READ_COMPLETE‚ÅŒÄ‚Î‚ê‚éB
-			//// ƒoƒbƒtƒ@[‚ÍAƒR[ƒ‹ƒoƒbƒNŠÖ”‚ÌWINHTTP_CALLBACK_STATUS_READ_COMPLETE‚Éˆ—‚·‚éB
+			//// ãƒãƒƒãƒ•ã‚¡ãƒ¼ã¯è§£æ”¾ã¯ã›ãšã«çµ‚äº†ã€‚
+			//// WinHttpReadData()å®Œäº†å‰ã«ã€ã‚³ãƒ¼ãƒ«ãƒãƒƒã‚¯é–¢æ•°ãŒWINHTTP_CALLBACK_STATUS_READ_COMPLETEã§å‘¼ã°ã‚Œã‚‹ã€‚
+			//// ãƒãƒƒãƒ•ã‚¡ãƒ¼ã¯ã€ã‚³ãƒ¼ãƒ«ãƒãƒƒã‚¯é–¢æ•°ã®WINHTTP_CALLBACK_STATUS_READ_COMPLETEæ™‚ã«å‡¦ç†ã™ã‚‹ã€‚
 		}
 		break;
 	case WINHTTP_CALLBACK_STATUS_READ_COMPLETE:
@@ -987,10 +998,10 @@ void CALLBACK InternetCallback(HINTERNET hInternet,
 		//	m_ssRead << pszBuffer;
 		//	free(pszBuffer);
 
-		//	// ƒŒƒXƒ|ƒ“ƒXƒf[ƒ^ƒf[ƒ^–â‚¢‡‚í‚¹
+		//	// ãƒ¬ã‚¹ãƒãƒ³ã‚¹ãƒ‡ãƒ¼ã‚¿ãƒ‡ãƒ¼ã‚¿å•ã„åˆã‚ã›
 		//	if (!WinHttpQueryDataAvailable(m_hRequest, NULL))
 		//	{
-		//		printf_s(_T("WinHttpQueryDataAvailable()‚É¸”s"));
+		//		printf_s(_T("WinHttpQueryDataAvailable()ã«å¤±æ•—"));
 		//		return;
 		//	}
 		//}
