@@ -697,7 +697,7 @@ BOOL Ballon(LPSTR title, LPSTR msg, DWORD dwType, UINT timeout) {
 
 	if (dwType == NIIF_ERROR)
 	{
-		return MessageBox(m_mainWnd, "設定ファイル、ネットワーク接続状況を確認してください！", "接続エラー", MB_ICONERROR);
+		return MessageBox(m_mainWnd, "設定ファイル、ネットワーク接続状況を確認してください。\n確認できたらもう一回出勤打刻してください!", "接続エラー", MB_ICONERROR);
 	}
 	else
 	{
