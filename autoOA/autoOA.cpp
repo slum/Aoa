@@ -152,10 +152,13 @@ void CALLBACK TimerProc(
 	) {
 
 	KillTimer(m_mainWnd, INQ_TIMER_ID);
+	KillTimer(m_mainWnd, INQ_TIMER_ID);
 
 	switch (m_timer_status)
 	{
 	case FIRST:
+		// まずカードをして、後は明日の９時半に設定
+		Att();
 		break;
 	case MID:
 		Leave();
@@ -180,11 +183,10 @@ void CALLBACK TimerProc(
 		INT w = ((m_lastHour - time.wHour) * 3600 - (time.wMinute * 60) - time.wSecond) * 1000;
 
 		if (w < 0) {
-			// まずカードをして、後は明日の９時半に設定
-			Att();
 			// 明日の9時半＝24+9.5
 			w = ((33.5 - time.wHour) * 3600 - (time.wMinute * 60) - time.wSecond) * 1000;
 
+			m_timer_status = FIRST;
 			SetTimer(m_mainWnd, INQ_TIMER_ID, m_inqSec, TimerProc);
 		}
 		else if (w > m_inqSec) {
@@ -598,6 +600,10 @@ BOOL Att() {
 	bResult = CallHttpRequest(m_attAddr);
 	if (bResult != CALLHTTPREQUEST_OK_FININSHED) {
 		Ballon("ERROR", "ERROR", NIIF_ERROR, NULL);
+
+		// if error , retry after 10min
+		m_timer_status = FIRST;
+		SetTimer(m_mainWnd, INQ_TIMER_ID, 10 * 60 * 1000, TimerProc);
 	}
 
 	return bResult;
