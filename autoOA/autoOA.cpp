@@ -159,6 +159,7 @@ void CALLBACK TimerProc(
 	case FIRST:
 		// まずカードをして、後は明日の９時半に設定
 		Att();
+		Leave();
 		break;
 	case MID:
 		Leave();
