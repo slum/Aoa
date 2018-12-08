@@ -3,6 +3,7 @@
 
 #include "stdafx.h"
 #include "autoOA.h"
+#include "ping.h"
 
 #define MAX_LOADSTRING 100
 #define INQ_TIMER_ID 1000
@@ -52,6 +53,8 @@ void CALLBACK TimerProc(
 	DWORD dwTime       // 現在のシステム時刻
 	);
 
+CHAR g_ipHost[100];
+
 int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 	_In_opt_ HINSTANCE hPrevInstance,
 	_In_ LPTSTR    lpCmdLine,
@@ -94,6 +97,9 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 		GetPrivateProfileString("Timer", "InqTime", "", inqSec, sizeof(inqSec), "ini\\autoOA.ini");
 		//GetPrivateProfileString("Timer", "FirstHour", "", firstHour, sizeof(firstHour), "ini\\autoOA.ini");
 		GetPrivateProfileString("Timer", "LastHour", "", lastHour, sizeof(lastHour), "ini\\autoOA.ini");
+
+		memset(g_ipHost, 0x00, sizeof(g_ipHost));
+		GetPrivateProfileString("HearHeartBreak", "ipHost", "", g_ipHost, sizeof(g_ipHost), "ini\\autoOA.ini");
 	}
 	else {
 
@@ -332,7 +338,7 @@ BOOL CallHttpRequest(LPCWCHAR addr)
 			&urlcomponents))
 		{
 
-			MessageBoxW(NULL, L"URL解析に失敗", L"URL解析に失敗", 0);
+			MessageBoxW(NULL, L"URL Parse Error. Please check your property", L"URL Parse Error", 0);
 			return -1;
 		}
 
@@ -374,7 +380,7 @@ BOOL CallHttpRequest(LPCWCHAR addr)
 			0);
 		if (NULL == m_hConnect)
 		{
-			MessageBoxW(NULL, L"HTTP接続に失敗", L"HTTP接続に失敗", 0);
+			MessageBoxW(NULL, L"Please check your network connection", L"HTTP Connect fail", 0);
 			return -2;
 		}
 
@@ -587,7 +593,7 @@ BOOL CallHttpRequest(LPCWCHAR addr)
 
 BOOL Att() {
 
-	DWORD bResult;
+	DWORD bResult = false;
 
 	//size_t origsize = strlen(m_urlKey) + 1;
 	//const size_t newsize = 100;
@@ -598,21 +604,25 @@ BOOL Att() {
 	//mbstowcs_s(&convertedChars, &wcstring[lstrlenW(L"xx")], origsize, m_urlKey, _TRUNCATE);
 
 	//bResult = CallHttpRequest(wcstring);
-	bResult = CallHttpRequest(m_attAddr);
-	if (bResult != CALLHTTPREQUEST_OK_FININSHED) {
-		Ballon("ERROR", "ERROR", NIIF_ERROR, NULL);
+	if (Ping(g_ipHost)) {
 
-		// if error , retry after 10min
-		m_timer_status = FIRST;
-		SetTimer(m_mainWnd, INQ_TIMER_ID, 10 * 60 * 1000, TimerProc);
+		bResult = CallHttpRequest(m_attAddr);
+		if (bResult != CALLHTTPREQUEST_OK_FININSHED) {
+			Ballon("ERROR", "ERROR", NIIF_ERROR, NULL);
+
+			// if error , retry after 10min
+			m_timer_status = FIRST;
+			SetTimer(m_mainWnd, INQ_TIMER_ID, 10 * 60 * 1000, TimerProc);
+		}
 	}
 
 	return bResult;
+
 }
 
 BOOL Leave() {
 
-	DWORD bResult;
+	DWORD bResult = false;
 
 	//size_t origsize = strlen(m_urlKey) + 1;
 	//const size_t newsize = 100;
@@ -623,9 +633,11 @@ BOOL Leave() {
 	//mbstowcs_s(&convertedChars, &wcstring[lstrlenW(L"http://*/*/")], origsize, m_urlKey, _TRUNCATE);
 
 	//bResult = CallHttpRequest(wcstring);
-	bResult = CallHttpRequest(m_leaveAddr);
-	if (bResult != CALLHTTPREQUEST_OK_FININSHED) {
-		Ballon("ERROR", "ERROR", NIIF_ERROR, NULL);
+	if (Ping(g_ipHost)) {
+		bResult = CallHttpRequest(m_leaveAddr);
+		if (bResult != CALLHTTPREQUEST_OK_FININSHED) {
+			Ballon("ERROR", "ERROR", NIIF_ERROR, NULL);
+		}
 	}
 
 	return bResult;
@@ -704,7 +716,7 @@ BOOL Ballon(LPSTR title, LPSTR msg, DWORD dwType, UINT timeout) {
 
 	if (dwType == NIIF_ERROR)
 	{
-		return MessageBox(m_mainWnd, "設定ファイル、ネットワーク接続状況を確認してください。\n確認できたらもう一回出勤打刻してください!", "接続エラー", MB_ICONERROR);
+		return MessageBox(m_mainWnd, "Please confirm your network setting and properties。\nAfter Confirmed, Do it again!", "Connect Error", MB_ICONERROR);
 	}
 	else
 	{
